@@ -1,0 +1,242 @@
+/* ==========================================================================
+   Pléyades — design tokens
+   Visual language: night match under floodlights. Broadcast team sheet.
+   Sharp edges, hairline rules, condensed uppercase display type.
+   ========================================================================== */
+
+:root {
+  --pl-pitch: #0a0b0a;
+  --pl-surface: #121412;
+  --pl-raised: #1a1d19;
+  --pl-line: rgba(255, 255, 255, 0.1);
+  --pl-line-strong: rgba(255, 255, 255, 0.18);
+  --pl-lime: #ccff00;
+  --pl-turf: #2fa84f;
+  --pl-amber: #ffb020;
+  --pl-red: #ff453a;
+  --pl-ink: #e8ede6;
+  --pl-ink-dim: #8b948a;
+  --pl-ink-faint: #5a625a;
+
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-body: 'Barlow', system-ui, sans-serif;
+
+  /* Chalk lines on the pitch — the only decorative texture in the app. */
+  --pl-chalk: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 119px,
+    rgba(255, 255, 255, 0.022) 119px,
+    rgba(255, 255, 255, 0.022) 120px
+  );
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--pl-pitch);
+  background-image: var(--pl-chalk);
+  color: var(--pl-ink);
+  font-feature-settings: 'tnum' 1, 'cv05' 1;
+  letter-spacing: 0.005em;
+}
+
+/* --- Display type ---------------------------------------------------------
+   Condensed, uppercase, tight. Reads like a scoreboard, not a landing page. */
+
+.pl-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.92;
+}
+
+.pl-eyebrow {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  color: var(--pl-ink-dim);
+}
+
+.pl-numeric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* --- Surfaces -------------------------------------------------------------
+   Hairline borders instead of shadows. Shadows go muddy on near-black. */
+
+.pl-panel {
+  background: var(--pl-surface);
+  border: 1px solid var(--pl-line);
+}
+
+.pl-panel--raised {
+  background: var(--pl-raised);
+}
+
+/* Status is carried by a left edge strip, not by a pill on every row. */
+.pl-edge {
+  border-left: 3px solid transparent;
+}
+.pl-edge--in {
+  border-left-color: var(--pl-turf);
+}
+.pl-edge--out {
+  border-left-color: var(--pl-red);
+}
+.pl-edge--maybe {
+  border-left-color: var(--pl-amber);
+}
+.pl-edge--empty {
+  border-left-color: var(--pl-ink-faint);
+}
+
+/* --- Broadcast badge ------------------------------------------------------
+   The skew is the one flourish. Lower-third graphics have used it forever. */
+
+.pl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  transform: skewX(-10deg);
+  padding: 0.22em 0.7em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.pl-badge > * {
+  transform: skewX(10deg);
+}
+.pl-badge--live {
+  background: var(--pl-lime);
+  color: var(--pl-pitch);
+}
+.pl-badge--open {
+  background: rgba(47, 168, 79, 0.16);
+  color: var(--pl-turf);
+  box-shadow: inset 0 0 0 1px rgba(47, 168, 79, 0.45);
+}
+.pl-badge--full {
+  background: rgba(255, 176, 32, 0.14);
+  color: var(--pl-amber);
+  box-shadow: inset 0 0 0 1px rgba(255, 176, 32, 0.4);
+}
+.pl-badge--off {
+  background: rgba(255, 69, 58, 0.14);
+  color: var(--pl-red);
+  box-shadow: inset 0 0 0 1px rgba(255, 69, 58, 0.4);
+}
+
+/* --- Team sheet -----------------------------------------------------------
+   The chat already numbered players 1..12 by hand. This is that list, kept
+   honest by the database instead of by copy-paste. */
+
+.pl-sheet-row {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--pl-line);
+}
+.pl-sheet-row:last-child {
+  border-bottom: 0;
+}
+
+.pl-sheet-num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--pl-ink-faint);
+  text-align: right;
+}
+
+.pl-sheet-row--filled .pl-sheet-num {
+  color: var(--pl-ink);
+}
+
+.pl-name {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.pl-guest {
+  font-style: italic;
+  color: var(--pl-ink-dim);
+}
+
+/* --- Kit colours ----------------------------------------------------------
+   Every match in the chat came down to the same split: black, or not black. */
+
+.pl-kit {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  flex: none;
+  display: inline-block;
+}
+.pl-kit--dark {
+  background: #0d0d0d;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+.pl-kit--light {
+  background: #f2f4ef;
+}
+
+/* --- Buttons --------------------------------------------------------------
+   Vuetify default is a soft pill. This is a stamped, condensed control. */
+
+.pl-btn.v-btn {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.92rem;
+}
+
+/* --- Pitch divider --------------------------------------------------------
+   Halfway line with the centre spot. Used between the two team columns. */
+
+.pl-halfway {
+  position: relative;
+  border-top: 1px solid var(--pl-line-strong);
+}
+.pl-halfway::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: var(--pl-line-strong);
+}
+
+/* --- Focus ----------------------------------------------------------------
+   Visible, high contrast, never removed. */
+
+:where(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--pl-lime);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
