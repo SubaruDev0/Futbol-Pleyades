@@ -1,14 +1,18 @@
 <script setup lang="ts">
+import { mdiEye, mdiEyeOff } from '@mdi/js'
+
 useHead({ title: 'Crear cuenta' })
 
 const { fetch: refreshSession } = useUserSession()
+const route = useRoute()
 
 const name = ref('')
-const phone = ref('')
+const phone = ref(digitsOnly(String(route.query.phone ?? '')).slice(0, 8))
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
+const { display: phoneDisplay, onUpdate: onPhoneUpdate, blockNonDigitInput, pastePhoneDigits } = useDigitsOnlyInput(phone)
 
 async function submit() {
   error.value = ''
@@ -45,15 +49,18 @@ async function submit() {
         :disabled="loading"
       />
       <v-text-field
-        v-model="phone"
+        :model-value="phoneDisplay"
         label="Teléfono"
         prefix="+56 9"
         placeholder="1234 5678"
         type="tel"
         autocomplete="tel"
         inputmode="numeric"
-        maxlength="8"
+        maxlength="9"
         :disabled="loading"
+        @update:model-value="onPhoneUpdate"
+        @beforeinput="blockNonDigitInput"
+        @paste="pastePhoneDigits"
       />
       <v-text-field
         v-model="password"
@@ -62,7 +69,7 @@ async function submit() {
         autocomplete="new-password"
         hint="Mínimo 8 caracteres"
         :disabled="loading"
-        :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+        :append-inner-icon="showPassword ? mdiEyeOff : mdiEye"
         @click:append-inner="showPassword = !showPassword"
       />
 
@@ -111,7 +118,7 @@ async function submit() {
 }
 
 .pl-auth__alt a {
-  color: var(--pl-lime);
+  color: var(--pl-accent);
   text-decoration: none;
   font-weight: 600;
 }

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 withDefaults(defineProps<{ size?: number }>(), { size: 26 })
 
-// The seven sisters, laid out as the cluster actually sits in the sky.
-// Alcyone is the bright one, so it carries the accent.
+// Las siete hermanas, ubicadas tal como se ve el cúmulo en el cielo.
+// Alcyone es la brillante, así que lleva el color de acento.
 const STARS = [
   { x: 12, y: 9, r: 1.6, name: 'Taygeta' },
   { x: 21, y: 6, r: 1.5, name: 'Maia' },
@@ -21,7 +21,7 @@ const STARS = [
     viewBox="0 0 44 32"
     fill="none"
     role="img"
-    aria-label="Pléyades"
+    aria-label="Pleyades"
   >
     <circle
       v-for="s in STARS"
@@ -29,7 +29,7 @@ const STARS = [
       :cx="s.x"
       :cy="s.y"
       :r="s.r"
-      :fill="s.name === 'Alcyone' ? '#CCFF00' : '#E8EDE6'"
+      :style="{ fill: s.name === 'Alcyone' ? 'var(--pl-accent)' : 'var(--pl-ink)' }"
       :opacity="s.name === 'Alcyone' ? 1 : 0.72"
     />
   </svg>

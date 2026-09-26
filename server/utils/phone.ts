@@ -1,7 +1,7 @@
 /**
- * Chilean mobiles only. The form supplies the eight subscriber digits, but people
- * also paste "+56 9 4620 2726" or "946202726" from a contact card, and all of
- * those are the same login — so they collapse to one stored form.
+ * Solo celulares chilenos. El formulario entrega los ocho dígitos de abonado,
+ * pero la gente también pega "+56 9 4620 2726" o "946202726" desde una
+ * tarjeta de contacto, y todos esos son el mismo login — así que colapsan a una sola forma guardada.
  */
 export function normalizePhone(input: string): string | null {
   const digits = input.replace(/\D/g, '')

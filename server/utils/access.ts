@@ -10,7 +10,7 @@ export async function requireMembership(groupId: string, userId: string) {
     )
     .limit(1)
 
-  // 404 rather than 403: a non-member should not learn that this group exists.
+  // 404 en vez de 403: alguien que no es miembro no debería enterarse de que este grupo existe.
   if (!membership) {
     throw createError({ statusCode: 404, statusMessage: 'No encontrado' })
   }

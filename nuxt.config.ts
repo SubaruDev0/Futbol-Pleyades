@@ -1,3 +1,5 @@
+const NIGHT = '#0B0A12'
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-09-17',
   devtools: { enabled: true },
@@ -18,47 +20,64 @@ export default defineNuxtConfig({
   },
 
   app: {
+    pageTransition: { name: 'pl-page', mode: 'out-in' },
     head: {
       htmlAttrs: { lang: 'es-CL' },
-      titleTemplate: '%s · Pléyades',
+      titleTemplate: '%s · Pleyades',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
-        { name: 'theme-color', content: '#0A0B0A' },
+        { name: 'theme-color', content: NIGHT },
       ],
     },
   },
 
   features: { inlineStyles: false },
 
+  nitro: {
+    storage: {
+      avatars: { driver: 'fs', base: './.data/avatars' },
+      // Privado: solo se lee a través de /api/matches/:id/receipts/:receiptId/image.
+      receipts: { driver: 'fs', base: './.data/receipts' },
+    },
+  },
+
   vuetify: {
     moduleOptions: {
       ssrClientHints: { prefersReducedMotion: true },
-      // Vuetify ships its own useLayout, which shadows Nuxt's built-in one.
+      // Vuetify trae su propio useLayout, que tapa al integrado de Nuxt.
       prefixComposables: ['useLayout'],
     },
     vuetifyOptions: {
-      // SVG paths from @mdi/js instead of the CDN icon font: nothing is fetched
-      // at runtime, and only the icons actually rendered get bundled.
+      // Rutas SVG desde @mdi/js en vez de la fuente de íconos del CDN: no se
+      // busca nada en runtime, y solo se empaquetan los íconos que realmente se renderizan.
       icons: { defaultSet: 'mdi-svg' },
       theme: {
         defaultTheme: 'pleyades',
         themes: {
           pleyades: {
             dark: true,
+            // La única fuente de cada color de la app: main.css mapea sus
+            // tokens --pl-* a las variables --v-theme-* que Vuetify emite desde aquí.
             colors: {
-              'background': '#0A0B0A',
-              'surface': '#121412',
-              'surface-bright': '#1A1D19',
-              'surface-variant': '#232722',
-              'on-surface-variant': '#E8EDE6',
-              'primary': '#CCFF00',
-              'on-primary': '#0A0B0A',
+              'background': NIGHT,
+              'on-background': '#ECE9F5',
+              'surface': '#13121C',
+              'on-surface': '#ECE9F5',
+              'surface-bright': '#1B1927',
+              'surface-variant': '#252233',
+              'on-surface-variant': '#ECE9F5',
+              // Amatista: las Pléyades de noche, y los ojos de Emilia.
+              'primary': '#B394FF',
+              'on-primary': NIGHT,
               'secondary': '#2FA84F',
               'on-secondary': '#061006',
               'error': '#FF453A',
               'warning': '#FFB020',
+              // El verde se mantiene: significa "voy", no es decoración.
               'success': '#2FA84F',
-              'info': '#4DA3FF',
+              'info': '#6FA8FF',
+              'ink-dim': '#928DA6',
+              'ink-faint': '#5E5A70',
             },
           },
         },

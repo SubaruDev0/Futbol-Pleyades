@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { mdiEye, mdiEyeOff } from '@mdi/js'
+
 useHead({ title: 'Entrar' })
 
 const { fetch: refreshSession } = useUserSession()
@@ -8,6 +10,8 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
+const showNoAccountDialog = ref(false)
+const { display: phoneDisplay, onUpdate: onPhoneUpdate, blockNonDigitInput, pastePhoneDigits } = useDigitsOnlyInput(phone)
 
 async function submit() {
   error.value = ''
@@ -22,6 +26,10 @@ async function submit() {
   }
   catch (e: any) {
     error.value = apiError(e)
+    // Un 401 cubre tanto "sin cuenta" como "contraseña incorrecta" a propósito
+    // (el servidor nunca revela cuál, para no filtrar qué números de teléfono
+    // están registrados) — así que se ofrece crear cuenta en cualquiera de los dos casos.
+    if (e?.statusCode === 401) showNoAccountDialog.value = true
   }
   finally {
     loading.value = false
@@ -41,15 +49,18 @@ async function submit() {
 
     <form class="pl-auth__form pl-panel" @submit.prevent="submit">
       <v-text-field
-        v-model="phone"
+        :model-value="phoneDisplay"
         label="Teléfono"
         prefix="+56 9"
         placeholder="1234 5678"
         type="tel"
         autocomplete="tel"
         inputmode="numeric"
-        maxlength="8"
+        maxlength="9"
         :disabled="loading"
+        @update:model-value="onPhoneUpdate"
+        @beforeinput="blockNonDigitInput"
+        @paste="pastePhoneDigits"
       />
       <v-text-field
         v-model="password"
@@ -57,7 +68,7 @@ async function submit() {
         :type="showPassword ? 'text' : 'password'"
         autocomplete="current-password"
         :disabled="loading"
-        :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+        :append-inner-icon="showPassword ? mdiEyeOff : mdiEye"
         @click:append-inner="showPassword = !showPassword"
       />
 
@@ -72,6 +83,26 @@ async function submit() {
         <NuxtLink to="/registro">Crea tu cuenta</NuxtLink>
       </p>
     </form>
+
+    <v-dialog v-model="showNoAccountDialog" max-width="380">
+      <div class="pl-panel pl-dialog">
+        <p class="pl-eyebrow">Teléfono o contraseña incorrectos</p>
+        <h2 class="pl-display pl-dialog__title">¿Todavía no<br>tienes cuenta?</h2>
+        <p class="pl-dialog__text">
+          Si es tu primera vez, crea una cuenta con este número.
+        </p>
+        <v-btn
+          color="primary"
+          block
+          :to="`/registro?phone=${phone}`"
+        >
+          Crear cuenta
+        </v-btn>
+        <v-btn variant="text" block @click="showNoAccountDialog = false">
+          Reintentar
+        </v-btn>
+      </div>
+    </v-dialog>
   </div>
 </template>
 
@@ -112,8 +143,25 @@ async function submit() {
 }
 
 .pl-auth__alt a {
-  color: var(--pl-lime);
+  color: var(--pl-accent);
   text-decoration: none;
   font-weight: 600;
+}
+
+.pl-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1.6rem;
+}
+
+.pl-dialog__title {
+  font-size: 2rem;
+  margin: 0.2rem 0 0.2rem;
+}
+
+.pl-dialog__text {
+  color: var(--pl-ink-dim);
+  margin: 0 0 0.6rem;
 }
 </style>

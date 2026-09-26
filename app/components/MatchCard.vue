@@ -2,6 +2,7 @@
 const props = defineProps<{
   match: {
     id: string
+    slug: string
     kickoffAt: string
     format: string
     capacity: number
@@ -13,6 +14,7 @@ const props = defineProps<{
     going: number
     myStatus: string | null
     myPaid: boolean | null
+    toReview?: number
   }
 }>()
 
@@ -35,14 +37,14 @@ const perPlayer = computed(() =>
   m.value.totalCost && m.value.going ? Math.ceil(m.value.totalCost / m.value.going) : null,
 )
 
-// One cell per slot on the sheet. A gauge you can count, not a progress bar.
+// Una celda por cupo en la planilla. Un medidor que se puede contar, no una barra de progreso.
 const slots = computed(() =>
   Array.from({ length: m.value.capacity }, (_, i) => i < m.value.going),
 )
 </script>
 
 <template>
-  <NuxtLink :to="`/partido/${m.id}`" class="pl-card pl-panel pl-edge" :class="edge">
+  <NuxtLink :to="`/partido/${m.slug}`" class="pl-card pl-panel pl-edge" :class="edge">
     <div class="pl-card__when">
       <span class="pl-display pl-card__day">{{ matchDay(m.kickoffAt) }}</span>
       <span class="pl-display pl-card__time pl-numeric">{{ matchTime(m.kickoffAt) }}</span>
@@ -50,15 +52,23 @@ const slots = computed(() =>
 
     <div class="pl-card__where">
       <p class="pl-card__venue">
-        {{ m.venueName ?? 'Cancha por definir' }}
-        <span v-if="m.fieldLabel" class="pl-card__field">· {{ m.fieldLabel }}</span>
+        <template v-if="m.venueName">
+          {{ m.venueName }}
+          <span v-if="m.fieldLabel" class="pl-card__field">· {{ m.fieldLabel }}</span>
+        </template>
+        <template v-else>{{ m.fieldLabel ?? 'Cancha por definir' }}</template>
       </p>
       <p class="pl-card__meta">
         {{ m.groupName }} · {{ FORMAT_LABEL[m.format] }} · {{ countdown(m.kickoffAt) }}
       </p>
     </div>
 
-    <span class="pl-badge" :class="badge.class"><span>{{ badge.text }}</span></span>
+    <div class="pl-card__badges">
+      <span class="pl-badge" :class="badge.class"><span>{{ badge.text }}</span></span>
+      <span v-if="m.toReview" class="pl-badge pl-badge--live">
+        <span class="pl-numeric">{{ m.toReview }} por revisar</span>
+      </span>
+    </div>
 
     <div class="pl-card__foot">
       <div class="pl-gauge" :aria-label="`${m.going} de ${m.capacity} anotados`">
@@ -125,6 +135,13 @@ const slots = computed(() =>
   margin: 0;
   font-size: 0.84rem;
   color: var(--pl-ink-dim);
+}
+
+.pl-card__badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
 }
 
 .pl-card__foot {

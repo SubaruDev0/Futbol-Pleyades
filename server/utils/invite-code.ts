@@ -1,4 +1,4 @@
-// No 0/O, no 1/I/L: this code gets dictated over chat and retyped by hand.
+// Sin 0/O, sin 1/I/L: este código se dicta por chat y se teclea de nuevo a mano.
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 
 export function generateInviteCode(length = 6): string {

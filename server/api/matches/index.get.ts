@@ -19,6 +19,7 @@ export default defineEventHandler(async (event) => {
     .with(mine)
     .select({
       id: schema.matches.id,
+      slug: schema.matches.slug,
       kickoffAt: schema.matches.kickoffAt,
       format: schema.matches.format,
       capacity: schema.matches.capacity,
@@ -30,6 +31,12 @@ export default defineEventHandler(async (event) => {
       going: sql<number>`count(${schema.matchPlayers.id}) filter (where ${schema.matchPlayers.status} = 'voy')::int`,
       myStatus: mine.status,
       myPaid: mine.paid,
+      // Comprobantes esperando por mí, solo en partidos donde cobro: un conteo correlacionado.
+      toReview: sql<number>`case when ${schema.matches.collectorUserId} = ${user.id} then (
+        select count(*) from ${schema.paymentReceipts}
+        join ${schema.matchPlayers} as mp on mp.id = ${schema.paymentReceipts.matchPlayerId}
+        where mp.match_id = ${schema.matches.id} and ${schema.paymentReceipts.status} = 'pendiente'
+      ) else 0 end::int`,
     })
     .from(schema.matches)
     .innerJoin(schema.groups, eq(schema.groups.id, schema.matches.groupId))

@@ -8,7 +8,9 @@ export default defineEventHandler(async (event) => {
       id: schema.users.id,
       name: schema.users.name,
       phone: schema.users.phone,
-      paymentAlias: schema.users.paymentAlias,
+      avatarUrl: schema.users.avatarUrl,
+      avatarSourceUrl: schema.users.avatarSourceUrl,
+      avatarCrop: schema.users.avatarCrop,
     })
     .from(schema.users)
     .where(eq(schema.users.id, user.id))

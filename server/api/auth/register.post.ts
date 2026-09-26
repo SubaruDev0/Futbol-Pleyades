@@ -29,7 +29,12 @@ export default defineEventHandler(async (event) => {
   const [user] = await db
     .insert(schema.users)
     .values({ phone: normalized, name, passwordHash: await hashPassword(password) })
-    .returning({ id: schema.users.id, name: schema.users.name, phone: schema.users.phone })
+    .returning({
+      id: schema.users.id,
+      name: schema.users.name,
+      phone: schema.users.phone,
+      avatarUrl: schema.users.avatarUrl,
+    })
 
   await setUserSession(event, { user })
 

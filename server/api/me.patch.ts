@@ -2,8 +2,7 @@ import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 
 const body = z.object({
-  name: z.string().trim().min(2).max(40).optional(),
-  paymentAlias: z.string().trim().max(120).nullable().optional(),
+  name: z.string().trim().min(2).max(40),
 })
 
 export default defineEventHandler(async (event) => {
@@ -18,12 +17,10 @@ export default defineEventHandler(async (event) => {
       id: schema.users.id,
       name: schema.users.name,
       phone: schema.users.phone,
-      paymentAlias: schema.users.paymentAlias,
+      avatarUrl: schema.users.avatarUrl,
     }))[0]!
 
-  await replaceUserSession(event, {
-    user: { id: updated.id, name: updated.name, phone: updated.phone },
-  })
+  await replaceUserSession(event, { user: updated })
 
   return updated
 })

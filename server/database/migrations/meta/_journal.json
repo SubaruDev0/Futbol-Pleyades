@@ -8,6 +8,41 @@
       "when": 1789665571657,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790373652919,
+      "tag": "0001_payment_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790374602261,
+      "tag": "0002_avatar_url",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790374928815,
+      "tag": "0003_avatar_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790431346328,
+      "tag": "0004_match_slug",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790431956734,
+      "tag": "0005_payment_receipts",
+      "breakpoints": true
     }
   ]
 }

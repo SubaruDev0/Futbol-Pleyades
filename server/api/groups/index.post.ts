@@ -2,7 +2,8 @@ import { z } from 'zod'
 
 const body = z.object({
   name: z.string().trim().min(2).max(50),
-  defaultFormat: z.enum(['f5', 'f6', 'f7', 'libre']).default('f7'),
+  // Un grupo ya no tiene una modalidad fija; se mantiene opcional para clientes antiguos.
+  defaultFormat: z.enum(['f5', 'f6', 'f7', 'libre']).optional(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -13,7 +14,7 @@ export default defineEventHandler(async (event) => {
 
   const group = (await db
     .insert(schema.groups)
-    .values({ name, defaultFormat, inviteCode: generateInviteCode(), createdBy: user.id })
+    .values({ name, ...(defaultFormat ? { defaultFormat } : {}), inviteCode: generateInviteCode(), createdBy: user.id })
     .returning())[0]!
 
   await db.insert(schema.groupMembers).values({

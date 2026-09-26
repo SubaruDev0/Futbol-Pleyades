@@ -1,5 +1,5 @@
 <script setup lang="ts">
-useHead({ title: 'Convocar' })
+useHead({ title: 'Armar partido' })
 
 const { data: groups } = await useFetch('/api/groups')
 const { data: venues } = await useFetch('/api/venues')
@@ -16,8 +16,11 @@ const notes = ref('')
 const error = ref('')
 const loading = ref(false)
 
+const route = useRoute()
+
 watchEffect(() => {
-  const first = groups.value?.[0]
+  const wanted = groups.value?.find(g => g.id === route.query.group)
+  const first = wanted ?? groups.value?.[0]
   if (!groupId.value && first) {
     groupId.value = first.id
     format.value = first.defaultFormat
@@ -70,7 +73,7 @@ async function submit() {
         notes: notes.value.trim() || undefined,
       },
     })
-    await navigateTo(`/partido/${match.id}`)
+    await navigateTo(`/partido/${match.slug}`)
   }
   catch (e: any) {
     error.value = apiError(e)
@@ -83,10 +86,22 @@ async function submit() {
 
 <template>
   <div class="pl-new">
-    <p class="pl-eyebrow">Nuevo partido</p>
-    <h1 class="pl-display pl-new__title">Convocar</h1>
+    <header class="pl-rise">
+      <p class="pl-eyebrow">Nuevo partido</p>
+      <h1 class="pl-display pl-new__title pl-section-title">
+        <span class="pl-wipe">Armar partido</span>
+        <InfoTip title="Armar un partido">
+          <p>Lo ven todos los miembros del grupo que elijas y cada uno se anota desde su teléfono.</p>
+          <p>Solo el grupo, el día y la hora son obligatorios.</p>
+        </InfoTip>
+      </h1>
+    </header>
 
-    <form class="pl-panel pl-new__form" @submit.prevent="submit">
+    <form
+      class="pl-panel pl-new__form pl-rise"
+      style="--i: 1"
+      @submit.prevent="submit"
+    >
       <v-select
         v-model="groupId"
         label="Grupo"
@@ -123,6 +138,20 @@ async function submit() {
         <v-text-field v-model="fieldLabel" label="Cancha" placeholder="Cancha 6" />
       </div>
 
+      <p class="pl-eyebrow pl-section-title pl-new__section">
+        Costo de la cancha
+        <InfoTip title="Dividir el costo">
+          <p>
+            Pon lo que cuesta la cancha y la app lo divide entre los que van. Si se suma más
+            gente, a cada uno le toca menos.
+          </p>
+          <p>
+            Quien recibe el dinero debe tener sus datos de transferencia en su perfil para que
+            aparezcan en el partido.
+          </p>
+        </InfoTip>
+      </p>
+
       <div class="pl-new__pair">
         <v-text-field
           v-model="totalCost"
@@ -151,7 +180,7 @@ async function submit() {
       <p v-if="error" class="pl-new__error">{{ error }}</p>
 
       <v-btn type="submit" color="primary" block :loading="loading">
-        Convocar partido
+        Armar partido
       </v-btn>
     </form>
   </div>
@@ -178,13 +207,18 @@ async function submit() {
 .pl-new__pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: start;
   gap: 0.8rem;
+}
+
+.pl-new__section {
+  margin: 0.2rem 0 -0.3rem;
 }
 
 .pl-new__hint {
   margin: -0.3rem 0 0;
   font-size: 0.85rem;
-  color: var(--pl-lime);
+  color: var(--pl-accent);
 }
 
 .pl-new__error {

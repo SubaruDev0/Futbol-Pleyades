@@ -1,6 +1,6 @@
 import { and, eq, inArray } from 'drizzle-orm'
 
-/** Fisher-Yates over crypto randomness — an honest draw nobody has to trust. */
+/** Fisher-Yates sobre aleatoriedad criptográfica — un sorteo honesto que nadie tiene que confiar a ciegas. */
 function shuffle<T>(items: T[]): T[] {
   const out = [...items]
   for (let i = out.length - 1; i > 0; i--) {
@@ -14,7 +14,7 @@ function shuffle<T>(items: T[]): T[] {
 
 export default defineEventHandler(async (event) => {
   const { user } = await requireUserSession(event)
-  const id = getRouterParam(event, 'id')!
+  const id = await matchIdParam(event)
   const { canManage } = await requireMatchAccess(id, user.id)
 
   if (!canManage) {

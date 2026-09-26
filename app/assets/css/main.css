@@ -1,34 +1,27 @@
 /* ==========================================================================
-   Pléyades — design tokens
+   Pleyades — design tokens
    Visual language: night match under floodlights. Broadcast team sheet.
    Sharp edges, hairline rules, condensed uppercase display type.
    ========================================================================== */
 
+/* Colours live only in the Vuetify theme (nuxt.config.ts), which exposes each
+   one as an "r,g,b" triplet: rgb(var(--v-theme-x)) or rgba(var(--v-theme-x), a). */
 :root {
-  --pl-pitch: #0a0b0a;
-  --pl-surface: #121412;
-  --pl-raised: #1a1d19;
+  --pl-pitch: rgb(var(--v-theme-background));
+  --pl-surface: rgb(var(--v-theme-surface));
+  --pl-raised: rgb(var(--v-theme-surface-bright));
   --pl-line: rgba(255, 255, 255, 0.1);
   --pl-line-strong: rgba(255, 255, 255, 0.18);
-  --pl-lime: #ccff00;
-  --pl-turf: #2fa84f;
-  --pl-amber: #ffb020;
-  --pl-red: #ff453a;
-  --pl-ink: #e8ede6;
-  --pl-ink-dim: #8b948a;
-  --pl-ink-faint: #5a625a;
+  --pl-accent: rgb(var(--v-theme-primary));
+  --pl-turf: rgb(var(--v-theme-success));
+  --pl-amber: rgb(var(--v-theme-warning));
+  --pl-red: rgb(var(--v-theme-error));
+  --pl-ink: rgb(var(--v-theme-on-background));
+  --pl-ink-dim: rgb(var(--v-theme-ink-dim));
+  --pl-ink-faint: rgb(var(--v-theme-ink-faint));
 
   --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --font-body: 'Barlow', system-ui, sans-serif;
-
-  /* Chalk lines on the pitch — the only decorative texture in the app. */
-  --pl-chalk: repeating-linear-gradient(
-    90deg,
-    transparent,
-    transparent 119px,
-    rgba(255, 255, 255, 0.022) 119px,
-    rgba(255, 255, 255, 0.022) 120px
-  );
 }
 
 html {
@@ -38,7 +31,6 @@ html {
 body {
   font-family: var(--font-body);
   background-color: var(--pl-pitch);
-  background-image: var(--pl-chalk);
   color: var(--pl-ink);
   font-feature-settings: 'tnum' 1, 'cv05' 1;
   letter-spacing: 0.005em;
@@ -118,23 +110,23 @@ body {
   transform: skewX(10deg);
 }
 .pl-badge--live {
-  background: var(--pl-lime);
+  background: var(--pl-accent);
   color: var(--pl-pitch);
 }
 .pl-badge--open {
-  background: rgba(47, 168, 79, 0.16);
+  background: rgba(var(--v-theme-success), 0.16);
   color: var(--pl-turf);
-  box-shadow: inset 0 0 0 1px rgba(47, 168, 79, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(var(--v-theme-success), 0.45);
 }
 .pl-badge--full {
-  background: rgba(255, 176, 32, 0.14);
+  background: rgba(var(--v-theme-warning), 0.14);
   color: var(--pl-amber);
-  box-shadow: inset 0 0 0 1px rgba(255, 176, 32, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(var(--v-theme-warning), 0.4);
 }
 .pl-badge--off {
-  background: rgba(255, 69, 58, 0.14);
+  background: rgba(var(--v-theme-error), 0.14);
   color: var(--pl-red);
-  box-shadow: inset 0 0 0 1px rgba(255, 69, 58, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(var(--v-theme-error), 0.4);
 }
 
 /* --- Team sheet -----------------------------------------------------------
@@ -228,8 +220,313 @@ body {
    Visible, high contrast, never removed. */
 
 :where(a, button, [tabindex]):focus-visible {
-  outline: 2px solid var(--pl-lime);
+  outline: 2px solid var(--pl-accent);
   outline-offset: 2px;
+}
+
+/* --- Motion ---------------------------------------------------------------
+   Broadcast graphics, toned down for an app you open between two WhatsApp
+   messages: everything settles in under half a second, nothing loops.
+   Stagger with style="--i: n" on each item. */
+
+@keyframes pl-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pl-rise {
+  animation: pl-rise 380ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+/* Lower-third wipe: an accent bar sweeps across and leaves the title behind. */
+/* The text stays hidden while the bar grows, then shows up as it retreats. */
+@keyframes pl-wipe-text {
+  0%,
+  45% {
+    color: transparent;
+  }
+}
+
+@keyframes pl-wipe-bar {
+  0% {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  45% {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+  55% {
+    transform: scaleX(1);
+    transform-origin: right;
+  }
+  100% {
+    transform: scaleX(0);
+    transform-origin: right;
+  }
+}
+
+.pl-wipe {
+  position: relative;
+  display: inline-block;
+  animation: pl-wipe-text 580ms linear both;
+}
+
+.pl-wipe::after {
+  content: '';
+  position: absolute;
+  inset: 0.08em -0.1em 0.04em;
+  background: var(--pl-accent);
+  transform: scaleX(0);
+  animation: pl-wipe-bar 580ms cubic-bezier(0.7, 0, 0.2, 1) both;
+  pointer-events: none;
+}
+
+/* Route change: the page slides in a few pixels on a slight skew, like the
+   next graphic cutting in on a broadcast. */
+.pl-page-enter-active,
+.pl-page-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.pl-page-enter-from {
+  opacity: 0;
+  transform: translateX(14px) skewX(-2deg);
+}
+.pl-page-leave-to {
+  opacity: 0;
+  transform: translateX(-8px);
+}
+
+/* Tab panels swapping inside one card. */
+.pl-swap-enter-active,
+.pl-swap-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 200ms ease;
+}
+.pl-swap-enter-from {
+  opacity: 0;
+  transform: translateX(10px);
+}
+.pl-swap-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+/* --- Segmented tabs ------------------------------------------------------- */
+
+.pl-tabs {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  border-bottom: 1px solid var(--pl-line);
+}
+
+.pl-tab {
+  position: relative;
+  padding: 0.95rem 0.6rem;
+  background: transparent;
+  border: 0;
+  color: var(--pl-ink-dim);
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.pl-tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--pl-accent);
+  transform: scaleX(0);
+  transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.pl-tab[aria-selected='true'] {
+  color: var(--pl-ink);
+}
+
+.pl-tab[aria-selected='true']::after {
+  transform: scaleX(1);
+}
+
+/* --- Modal ----------------------------------------------------------------
+   Square, hairline, accent top rule; fullscreen on phones (v-dialog :fullscreen). */
+
+.pl-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  background: var(--pl-raised);
+  border: 1px solid var(--pl-line-strong);
+  border-top: 2px solid var(--pl-accent);
+}
+
+.v-dialog--fullscreen .pl-modal {
+  max-height: none;
+  height: 100%;
+  border-left: 0;
+  border-right: 0;
+}
+
+.pl-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem 0.6rem;
+}
+
+.pl-modal__head .pl-eyebrow {
+  margin: 0;
+}
+
+.pl-modal__title {
+  margin: 0.3rem 0 0;
+  font-size: clamp(1.5rem, 6vw, 1.9rem);
+  overflow-wrap: anywhere;
+}
+
+.pl-modal__close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  background: transparent;
+  border: 1px solid var(--pl-line-strong);
+  color: var(--pl-ink);
+  cursor: pointer;
+}
+
+.pl-modal__close:hover {
+  border-color: var(--pl-accent);
+}
+
+.pl-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 0.4rem 1.2rem 1rem;
+  flex: 1;
+}
+
+.pl-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.9rem 1.2rem 1.1rem;
+  border-top: 1px solid var(--pl-line);
+}
+
+.pl-modal__error {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--pl-red);
+}
+
+/* --- Profile cards --------------------------------------------------------
+   Shared by the cards on /perfil (and the tutorial's copy of that screen). */
+
+.pl-card {
+  padding: 1.2rem;
+}
+
+.pl-card__title {
+  font-size: 1.3rem;
+  margin: 0 0 0.9rem;
+}
+
+.pl-card__sub {
+  color: var(--pl-ink-dim);
+  font-size: 0.86rem;
+  margin: -0.5rem 0 0.9rem;
+}
+
+.pl-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.pl-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.9rem;
+}
+
+.pl-card__foot--split {
+  flex-wrap: wrap;
+}
+
+.pl-card__foot--split > .pl-note {
+  margin-right: auto;
+}
+
+.pl-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--pl-ink-dim);
+  max-width: 44ch;
+}
+
+.pl-msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.pl-msg--error {
+  color: var(--pl-red);
+}
+
+.pl-msg--ok {
+  color: var(--pl-turf);
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .pl-card__foot--split > .pl-note {
+    flex-basis: 100%;
+  }
+}
+
+/* --- Section heading with its info tip ------------------------------------ */
+
+.pl-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* --- Modal scrim ------------------------------------------------------------
+   Vuetify's default scrim barely shows against a near-black theme: blur what's
+   behind instead of relying on darkening alone. Applies to every v-dialog. */
+
+.v-overlay__scrim {
+  background-color: rgba(2, 2, 6, 0.82) !important;
+  backdrop-filter: blur(6px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -237,6 +534,9 @@ body {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
   }
 }

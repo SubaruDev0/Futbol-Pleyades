@@ -1,4 +1,4 @@
-# Pléyades
+# Pleyades
 
 Organiza los partidos de fútbol 5, 6 y 7 que hoy se coordinan a mano por WhatsApp:
 quién juega, dónde, a qué hora, cuánto sale y quién ya transfirió.
@@ -47,6 +47,7 @@ Después:
 pnpm install
 createdb pleyades
 psql -d pleyades -f server/database/migrations/0000_init.sql
+psql -d pleyades -f server/database/migrations/0001_payment_accounts.sql
 pnpm dev
 ```
 
@@ -79,5 +80,9 @@ users ──< group_members >── groups ──< matches ──< match_players
 
 - Un jugador no puede confirmar dos veces el mismo partido (índice único parcial).
 - Un invitado no tiene cuenta: queda a nombre de quien lo trajo.
-- Los datos de transferencia viven en el perfil del usuario y se exponen
-  únicamente dentro de un partido donde esa persona cobra.
+- Los datos de transferencia viven en `payment_accounts` (uno por usuario): titular,
+  RUT normalizado (`21347032-9`), código de banco, tipo de cuenta y número. Solo los
+  ven quienes juegan un partido donde esa persona cobra, y quien cobra.
+- La lista de bancos y las reglas de RUT y tipo de cuenta están en `shared/utils/`, y
+  las usan tanto la app como el servidor. En BancoEstado con Cuenta RUT, el servidor
+  calcula el número de cuenta a partir del RUT.

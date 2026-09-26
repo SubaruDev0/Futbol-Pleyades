@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     .limit(1)
 
   if (!group) {
-    throw createError({ statusCode: 404, statusMessage: 'No existe un grupo con ese código' })
+    throw createError({ statusCode: 404, statusMessage: 'Ese código no existe' })
   }
 
   const [already] = await db
@@ -31,9 +31,14 @@ export default defineEventHandler(async (event) => {
     )
     .limit(1)
 
-  if (!already) {
-    await db.insert(schema.groupMembers).values({ groupId: group.id, userId: user.id })
+  if (already) {
+    throw createError({ statusCode: 409, statusMessage: `Ya estás en «${group.name}»` })
   }
+
+  await db
+    .insert(schema.groupMembers)
+    .values({ groupId: group.id, userId: user.id })
+    .onConflictDoNothing()
 
   return group
 })

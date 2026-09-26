@@ -7,7 +7,7 @@ const body = z.object({
 
 export default defineEventHandler(async (event) => {
   const { user } = await requireUserSession(event)
-  const id = getRouterParam(event, 'id')!
+  const id = await matchIdParam(event)
   const { match } = await requireMatchAccess(id, user.id)
 
   if (match.status === 'cancelado' || match.status === 'jugado') {
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Dropping out releases the kit assignment; the draw is no longer valid for them.
+  // Bajarse libera la asignación de camiseta; el sorteo ya no es válido para esa persona.
   const [updated] = await db
     .update(schema.matchPlayers)
     .set({

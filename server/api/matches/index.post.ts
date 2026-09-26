@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { eq } from 'drizzle-orm'
 
 const body = z.object({
   groupId: z.uuid(),
@@ -19,16 +20,35 @@ export default defineEventHandler(async (event) => {
   await requireMembership(input.groupId, user.id)
 
   const db = useDb()
-  const match = (await db
-    .insert(schema.matches)
-    .values({
-      ...input,
-      capacity: input.capacity ?? capacityFor(input.format),
-      createdBy: user.id,
-    })
-    .returning())[0]!
+  const [group] = await db
+    .select({ name: schema.groups.name })
+    .from(schema.groups)
+    .where(eq(schema.groups.id, input.groupId))
+    .limit(1)
 
-  // Whoever calls the match is in it. That was never in doubt in the chat either.
+  const insert = async () =>
+    (await db
+      .insert(schema.matches)
+      .values({
+        ...input,
+        slug: await uniqueMatchSlug(group!.name, input.kickoffAt),
+        capacity: input.capacity ?? capacityFor(input.format),
+        createdBy: user.id,
+      })
+      .returning())[0]!
+
+  let match: Awaited<ReturnType<typeof insert>>
+  try {
+    match = await insert()
+  }
+  catch (e) {
+    // Dos partidos creados a la vez para el mismo horario: el segundo toma el siguiente sufijo.
+    const err = e as { code?: string, cause?: { code?: string } }
+    if ((err.cause?.code ?? err.code) !== '23505') throw e
+    match = await insert()
+  }
+
+  // Quien convoca el partido está en él. Eso tampoco se ponía en duda en el chat.
   await db.insert(schema.matchPlayers).values({
     matchId: match.id,
     userId: user.id,

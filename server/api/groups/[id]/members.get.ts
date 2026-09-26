@@ -1,4 +1,4 @@
-import { asc, eq, sql } from 'drizzle-orm'
+import { asc, eq, isNotNull } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const { user } = await requireUserSession(event)
@@ -9,12 +9,14 @@ export default defineEventHandler(async (event) => {
     .select({
       id: schema.users.id,
       name: schema.users.name,
+      avatarUrl: schema.users.avatarUrl,
       role: schema.groupMembers.role,
-      // Whether they can collect — never the account details themselves.
-      hasPaymentAlias: sql<boolean>`${schema.users.paymentAlias} is not null`,
+      // Si pueden cobrar — nunca los datos de la cuenta en sí.
+      hasPaymentAccount: isNotNull(schema.paymentAccounts.userId).mapWith(Boolean),
     })
     .from(schema.groupMembers)
     .innerJoin(schema.users, eq(schema.users.id, schema.groupMembers.userId))
+    .leftJoin(schema.paymentAccounts, eq(schema.paymentAccounts.userId, schema.users.id))
     .where(eq(schema.groupMembers.groupId, groupId))
-    .orderBy(asc(schema.users.name))
+    .orderBy(asc(schema.groupMembers.role), asc(schema.users.name))
 })

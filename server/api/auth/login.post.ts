@@ -10,8 +10,8 @@ export default defineEventHandler(async (event) => {
   const { phone, password } = await readValidatedBody(event, body.parse)
 
   const normalized = normalizePhone(phone)
-  // Same error and shape for a bad number, an unknown user and a wrong password,
-  // so the response never reveals which numbers are registered.
+  // Mismo error y formato para un número inválido, un usuario desconocido y una
+  // contraseña incorrecta, así la respuesta nunca revela qué números están registrados.
   const invalid = () =>
     createError({ statusCode: 401, statusMessage: 'Teléfono o contraseña incorrectos' })
 
@@ -28,8 +28,8 @@ export default defineEventHandler(async (event) => {
   if (!(await verifyPassword(user.passwordHash, password))) throw invalid()
 
   await setUserSession(event, {
-    user: { id: user.id, name: user.name, phone: user.phone },
+    user: { id: user.id, name: user.name, phone: user.phone, avatarUrl: user.avatarUrl },
   })
 
-  return { user: { id: user.id, name: user.name, phone: user.phone } }
+  return { user: { id: user.id, name: user.name, phone: user.phone, avatarUrl: user.avatarUrl } }
 })

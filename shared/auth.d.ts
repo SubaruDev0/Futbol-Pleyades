@@ -3,6 +3,7 @@ declare module '#auth-utils' {
     id: string
     name: string
     phone: string
+    avatarUrl: string | null
   }
 }
 

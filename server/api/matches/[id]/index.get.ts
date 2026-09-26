@@ -1,9 +1,9 @@
-import { asc, eq } from 'drizzle-orm'
+import { asc, desc, eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 
 export default defineEventHandler(async (event) => {
   const { user } = await requireUserSession(event)
-  const id = getRouterParam(event, 'id')!
+  const id = await matchIdParam(event)
   const { match, canManage } = await requireMatchAccess(id, user.id)
 
   const db = useDb()
@@ -14,12 +14,22 @@ export default defineEventHandler(async (event) => {
       match: schema.matches,
       venue: schema.venues,
       collectorName: collector.name,
-      // Transfer details reach only players of this match, never a group chat.
-      collectorAlias: collector.paymentAlias,
+      collectorAccount: {
+        holderName: schema.paymentAccounts.holderName,
+        rut: schema.paymentAccounts.rut,
+        bank: schema.paymentAccounts.bank,
+        accountType: schema.paymentAccounts.accountType,
+        accountNumber: schema.paymentAccounts.accountNumber,
+        email: schema.paymentAccounts.email,
+      },
     })
     .from(schema.matches)
     .leftJoin(schema.venues, eq(schema.venues.id, schema.matches.venueId))
     .leftJoin(collector, eq(collector.id, schema.matches.collectorUserId))
+    .leftJoin(
+      schema.paymentAccounts,
+      eq(schema.paymentAccounts.userId, schema.matches.collectorUserId),
+    )
     .where(eq(schema.matches.id, id))
     .limit(1)
 
@@ -28,7 +38,9 @@ export default defineEventHandler(async (event) => {
       id: schema.matchPlayers.id,
       userId: schema.matchPlayers.userId,
       name: schema.users.name,
+      avatarUrl: schema.users.avatarUrl,
       guestName: schema.matchPlayers.guestName,
+      invitedBy: schema.matchPlayers.invitedBy,
       status: schema.matchPlayers.status,
       kit: schema.matchPlayers.kit,
       paid: schema.matchPlayers.paid,
@@ -40,13 +52,64 @@ export default defineEventHandler(async (event) => {
     .orderBy(asc(schema.matchPlayers.respondedAt))
 
   const going = players.filter(p => p.status === 'voy')
+  const canSettle = canSettlePayments(match, user.id, canManage)
+
+  // El último comprobante por fila. Solo uno abierto (pendiente o rechazado) dice
+  // algo que la bandera "paid" no dice; una vez pagado, la bandera es la verdad.
+  const receipts = players.length
+    ? await db
+      .select({
+        id: schema.paymentReceipts.id,
+        matchPlayerId: schema.paymentReceipts.matchPlayerId,
+        status: schema.paymentReceipts.status,
+        rejectReason: schema.paymentReceipts.rejectReason,
+        createdAt: schema.paymentReceipts.createdAt,
+      })
+      .from(schema.paymentReceipts)
+      .where(inArray(schema.paymentReceipts.matchPlayerId, players.map(p => p.id)))
+      .orderBy(desc(schema.paymentReceipts.createdAt))
+    : []
+  const latest = new Map<string, (typeof receipts)[number]>()
+  for (const r of receipts) if (!latest.has(r.matchPlayerId)) latest.set(r.matchPlayerId, r)
+
+  const receiptFor = (p: (typeof players)[number]) => {
+    const r = latest.get(p.id)
+    if (!r || p.paid || r.status === 'aceptado') return null
+    // Cualquiera puede ver que un pago está en revisión; el comprobante en sí y un
+    // rechazo quedan solo entre quien paga y quien cobra.
+    if (canSettle || paysFor(p, user.id)) return r
+    return r.status === 'pendiente'
+      ? { id: null, matchPlayerId: r.matchPlayerId, status: r.status, rejectReason: null, createdAt: r.createdAt }
+      : null
+  }
+  const withReceipts = players.map(p => ({ ...p, receipt: receiptFor(p) }))
+
+  const pendingReceipts = canSettle
+    ? withReceipts
+      .filter(p => p.receipt?.status === 'pendiente')
+      .map(p => ({
+        receiptId: p.receipt!.id!,
+        playerId: p.id,
+        name: p.name ?? p.guestName ?? 'Sin nombre',
+        guest: !p.userId,
+        createdAt: p.receipt!.createdAt,
+      }))
+    : []
+
+  // Los datos de transferencia llegan solo a quienes juegan este partido (y a
+  // quien cobra), nunca a todos los miembros del grupo.
+  const isPlaying = players.some(p => p.userId === user.id && p.status !== 'no_voy')
+  const canSeeAccount = isPlaying || match.collectorUserId === user.id
 
   return {
     ...detail,
+    collectorAccount: canSeeAccount ? detail?.collectorAccount ?? null : null,
     match,
     canManage,
-    players,
-    // The split the chat recomputed by hand every single time.
+    canSettle,
+    players: withReceipts,
+    pendingReceipts,
+    // La división que el chat recalculaba a mano cada vez.
     perPlayer:
       match.totalCost && going.length ? Math.ceil(match.totalCost / going.length) : null,
   }
