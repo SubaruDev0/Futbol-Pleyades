@@ -58,12 +58,21 @@ function measure() {
   placePopover()
 }
 
+const CARD_W = 360
+
+/** Hacia dónde cabe la tarjeta al lado del objetivo, si cabe. */
+function sideOf(h: { left: number, width: number }, width: number, vw: number): 'right' | 'left' | null {
+  if (vw - (h.left + h.width) >= width + GAP + EDGE) return 'right'
+  if (h.left >= width + GAP + EDGE) return 'left'
+  return null
+}
+
 function placePopover() {
   const h = rect
   if (!h) return
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const width = Math.min(360, vw - EDGE * 2)
+  const width = Math.min(CARD_W, vw - EDGE * 2)
   const popH = pop.value?.offsetHeight ?? 190
 
   // Píxeles enteros: los desplazamientos fraccionarios hacen que las marcas finas de progreso salten de forma dispareja.
@@ -78,6 +87,14 @@ function placePopover() {
   else if (above >= TOP) {
     hole.value = h
     popStyle.value = { width: `${width}px`, left: `${left}px`, top: `${above}px` }
+  }
+  else if (sideOf(h, width, vw)) {
+    // Objetivo alto en pantalla ancha: la tarjeta va al costado, a la altura de su inicio.
+    hole.value = h
+    const side = sideOf(h, width, vw)
+    const x = side === 'right' ? h.left + h.width + GAP : h.left - GAP - width
+    const y = Math.min(Math.max(h.top, TOP), vh - popH - EDGE)
+    popStyle.value = { width: `${width}px`, left: `${Math.round(x)}px`, top: `${Math.round(y)}px` }
   }
   else {
     // Objetivo alto en un teléfono: la tarjeta va abajo y se ilumina solo lo que
@@ -104,14 +121,21 @@ function scrollToTarget(el: HTMLElement): boolean {
   const r = el.getBoundingClientRect()
   const vh = window.innerHeight
   const popH = pop.value?.offsetHeight ?? 190
-  const block = r.height + PAD * 2 + GAP + popH
   const room = vh - TOP - EDGE
+  const stacked = r.height + PAD * 2 + GAP + popH
+  // Si no cabe apilado pero sí al costado, solo el objetivo necesita altura.
+  const beside = stacked > room && sideOf(
+    { left: r.left - PAD, width: r.width + PAD * 2 },
+    Math.min(CARD_W, window.innerWidth - EDGE * 2),
+    window.innerWidth,
+  )
+  const block = beside ? Math.max(r.height + PAD * 2, popH) : stacked
   // Si no cabe el par, el paso decide qué extremo se ve; 'end' deja el final
   // del objetivo (donde suele estar el botón) justo sobre la tarjeta.
   const want = block <= room
     ? TOP + PAD + (room - block) / 2
     : step.value?.focus === 'end'
-      ? vh - EDGE - popH - GAP - PAD - r.height
+      ? vh - EDGE - (beside ? 0 : popH + GAP) - PAD - r.height
       : TOP + PAD
   const delta = r.top - want
   if (Math.abs(delta) < 24) return false

@@ -227,20 +227,32 @@ const place = (m: UpcomingMatch) =>
             {{ organizer ? 'Organizas este grupo' : 'Eres miembro' }}
           </p>
           <form v-if="editingName" class="pl-gdlg__nameform" @submit.prevent="saveName">
-            <v-text-field
+            <input
               v-model="nameDraft"
+              class="pl-display pl-gdlg__nameinput"
               autofocus
               maxlength="60"
-              density="compact"
-              hide-details
+              aria-label="Nombre del grupo"
               @keyup.esc="editingName = false"
-            />
-            <v-btn type="submit" size="small" color="primary" :loading="nameBusy">
-              <v-icon :icon="mdiCheck" size="18" />
-            </v-btn>
-            <v-btn size="small" variant="text" :disabled="nameBusy" @click="editingName = false">
+            >
+            <button
+              type="submit"
+              class="pl-gdlg__namebtn pl-gdlg__namebtn--ok"
+              :disabled="nameBusy"
+              aria-label="Guardar nombre"
+            >
+              <v-progress-circular v-if="nameBusy" indeterminate size="16" width="2" />
+              <v-icon v-else :icon="mdiCheck" size="18" />
+            </button>
+            <button
+              type="button"
+              class="pl-gdlg__namebtn"
+              :disabled="nameBusy"
+              aria-label="Cancelar"
+              @click="editingName = false"
+            >
               <v-icon :icon="mdiClose" size="18" />
-            </v-btn>
+            </button>
           </form>
           <div v-else class="pl-gdlg__namerow">
             <h2 :id="`gdlg-${group.id}`" class="pl-display pl-gdlg__title">{{ group.name }}</h2>
@@ -407,6 +419,7 @@ const place = (m: UpcomingMatch) =>
 }
 
 .pl-gdlg__id {
+  flex: 1;
   min-width: 0;
 }
 
@@ -453,21 +466,56 @@ const place = (m: UpcomingMatch) =>
 
 .pl-gdlg__nameform {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0.4rem;
   margin-top: 0.3rem;
 }
 
-.pl-gdlg__nameform .v-input {
+/* Se edita con la misma letra del título, así el cambio se ve en su lugar. */
+.pl-gdlg__nameinput {
   flex: 1;
   min-width: 0;
+  height: 48px;
+  padding: 0 0.6rem;
+  background: transparent;
+  border: 1px solid var(--pl-line-strong);
+  border-bottom: 2px solid var(--pl-accent);
+  color: var(--pl-ink);
+  font-size: clamp(1.4rem, 5vw, 1.8rem);
+  outline: none;
 }
 
-.pl-gdlg__nameform .v-btn {
+.pl-gdlg__nameinput:focus {
+  border-color: var(--pl-accent);
+}
+
+.pl-gdlg__namebtn {
+  display: grid;
+  place-items: center;
   flex: none;
-  min-width: 36px;
-  height: 40px;
-  padding: 0;
+  width: 48px;
+  background: transparent;
+  border: 1px solid var(--pl-line-strong);
+  color: var(--pl-ink-dim);
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.pl-gdlg__namebtn:hover:not(:disabled) {
+  border-color: var(--pl-accent);
+  color: var(--pl-accent);
+}
+
+.pl-gdlg__namebtn--ok {
+  background: var(--pl-accent);
+  border-color: var(--pl-accent);
+  color: var(--pl-pitch);
+}
+
+.pl-gdlg__namebtn--ok:hover:not(:disabled) {
+  color: var(--pl-pitch);
 }
 
 .pl-gdlg__nameerror {
