@@ -11,6 +11,9 @@ const NAV = [
   { to: '/grupos', label: 'Grupos' },
 ]
 
+const { data: isAdmin } = await useIsAdmin()
+const nav = computed(() => (isAdmin.value ? [...NAV, { to: '/admin', label: 'Admin' }] : NAV))
+
 const isActive = (to: string) => (to === '/' ? route.path === '/' : route.path.startsWith(to))
 
 async function logout() {
@@ -77,7 +80,7 @@ function openChooser() {
 
       <nav v-if="loggedIn" class="pl-nav">
         <NuxtLink
-          v-for="item in NAV"
+          v-for="item in nav"
           :key="item.to"
           :to="item.to"
           class="pl-nav__link"

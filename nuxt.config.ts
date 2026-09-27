@@ -10,6 +10,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     databaseUrl: '',
+    // Celular de la cuenta dueña: la única que ve /admin. Vacío = nadie.
+    adminPhone: '',
   },
 
   fonts: {

@@ -16,5 +16,6 @@ export default defineEventHandler(async (event) => {
     .where(eq(schema.users.id, user.id))
     .limit(1)
 
-  return me
+  // Se calcula en cada request, no va en la sesión: cambiar ADMIN_PHONE rige de inmediato.
+  return me && { ...me, isAdmin: isAdminPhone(me.phone) }
 })
