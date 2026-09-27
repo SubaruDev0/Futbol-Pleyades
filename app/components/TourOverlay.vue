@@ -18,7 +18,11 @@ const EDGE = 16
 /** Libre del encabezado sticky y de la barra "Ejemplo" del tutorial debajo de él. */
 const TOP = 100
 
-const hole = ref<{ top: number, left: number, width: number, height: number } | null>(null)
+type Box = { top: number, left: number, width: number, height: number }
+/** El objetivo medido, con su margen. */
+let rect: Box | null = null
+/** Lo que se ilumina: el objetivo, recortado si la tarjeta tiene que ir encima. */
+const hole = ref<Box | null>(null)
 const popStyle = ref<Record<string, string>>({})
 const pop = ref<HTMLElement | null>(null)
 const nextBtn = ref<HTMLButtonElement | null>(null)
@@ -40,11 +44,12 @@ function target(): HTMLElement | null {
 function measure() {
   const el = target()
   if (!el) {
+    rect = null
     hole.value = null
     return
   }
   const r = el.getBoundingClientRect()
-  hole.value = {
+  rect = {
     top: r.top - PAD,
     left: r.left - PAD,
     width: r.width + PAD * 2,
@@ -54,7 +59,7 @@ function measure() {
 }
 
 function placePopover() {
-  const h = hole.value
+  const h = rect
   if (!h) return
   const vw = window.innerWidth
   const vh = window.innerHeight
@@ -67,14 +72,20 @@ function placePopover() {
   const above = Math.round(h.top - GAP - popH)
 
   if (below + popH <= vh - EDGE) {
+    hole.value = h
     popStyle.value = { width: `${width}px`, left: `${left}px`, top: `${below}px` }
   }
   else if (above >= TOP) {
+    hole.value = h
     popStyle.value = { width: `${width}px`, left: `${left}px`, top: `${above}px` }
   }
   else {
-    // Objetivo alto en una pantalla de teléfono corta: se ancla la tarjeta al borde inferior.
+    // Objetivo alto en un teléfono: la tarjeta va abajo y se ilumina solo lo que
+    // queda a la vista sobre ella, en vez de dibujar el resaltado por debajo.
     popStyle.value = { width: `${width}px`, left: `${left}px`, bottom: `${EDGE}px` }
+    const top = Math.max(h.top, TOP - PAD)
+    const bottom = Math.min(h.top + h.height, vh - EDGE - popH - GAP)
+    hole.value = { ...h, top, height: Math.max(0, bottom - top) }
   }
 }
 
@@ -95,7 +106,13 @@ function scrollToTarget(el: HTMLElement): boolean {
   const popH = pop.value?.offsetHeight ?? 190
   const block = r.height + PAD * 2 + GAP + popH
   const room = vh - TOP - EDGE
-  const want = block <= room ? TOP + PAD + (room - block) / 2 : TOP + PAD
+  // Si no cabe el par, el paso decide qué extremo se ve; 'end' deja el final
+  // del objetivo (donde suele estar el botón) justo sobre la tarjeta.
+  const want = block <= room
+    ? TOP + PAD + (room - block) / 2
+    : step.value?.focus === 'end'
+      ? vh - EDGE - popH - GAP - PAD - r.height
+      : TOP + PAD
   const delta = r.top - want
   if (Math.abs(delta) < 24) return false
   window.scrollTo({ top: window.scrollY + delta, behavior: reducedMotion() ? 'auto' : 'smooth' })
@@ -121,6 +138,7 @@ async function focusStep(attempt = 0) {
   const el = target()
   watchTarget(el)
   if (!el) {
+    rect = null
     hole.value = null
     // Un diálogo en el demo se monta un instante después: se reintenta un momento.
     if (attempt < 8) retryTimer = setTimeout(() => focusStep(attempt + 1), 100)
@@ -160,6 +178,7 @@ watch(active, (on) => {
   }
   else {
     detach()
+    rect = null
     hole.value = null
     returnFocus?.focus?.({ preventScroll: true })
   }
@@ -425,6 +444,28 @@ onBeforeUnmount(() => {
   background: var(--pl-accent);
   border-color: var(--pl-accent);
   color: var(--pl-pitch);
+}
+
+/* En teléfono la tarjeta le quita alto al objetivo: se aprieta sin perder lectura. */
+@media (max-width: 480px) {
+  .pl-tour__card {
+    padding: 0.7rem 0.85rem 0.8rem;
+  }
+  .pl-tour__title {
+    font-size: 1.2rem;
+    margin-bottom: 0.25rem;
+  }
+  .pl-tour__text {
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+  .pl-tour__progress {
+    margin: 0.7rem 0 0.65rem;
+  }
+  .pl-tour__btn {
+    height: 38px;
+    font-size: 0.8rem;
+  }
 }
 
 .pl-tour-enter-active,

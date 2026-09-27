@@ -7,6 +7,8 @@ export interface TourStep {
   text: string
   /** Dónde está la historia del demo mientras este paso está en pantalla. */
   demo: DemoState
+  /** Si el objetivo no cabe junto a la tarjeta, qué extremo queda a la vista. */
+  focus?: 'start' | 'end'
 }
 
 /** Qué pantalla real dibuja el tutorial con datos de demo. */
@@ -38,6 +40,7 @@ export const TUTORIALS: Tutorial[] = [
         title: 'Unirme con código',
         text: 'Pide el código a quien organiza, escríbelo aquí y toca Unirme.',
         demo: S({ tab: 'join', typed: true }),
+        focus: 'end',
       },
       {
         target: '.pl-list .pl-gcard',
@@ -65,6 +68,7 @@ export const TUTORIALS: Tutorial[] = [
         title: 'Crear grupo',
         text: 'Ponle nombre y toca Crear grupo. Quedas como organizador.',
         demo: S({ tab: 'create', typed: true }),
+        focus: 'end',
       },
       {
         target: '.pl-list .pl-gcard__code',
