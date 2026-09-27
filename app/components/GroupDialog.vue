@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mdiArrowRight, mdiCheck, mdiClose, mdiContentCopy, mdiMapMarkerOutline, mdiPlus } from '@mdi/js'
+import { mdiArrowRight, mdiCheck, mdiClose, mdiContentCopy, mdiMapMarkerOutline, mdiPencilOutline, mdiPlus } from '@mdi/js'
 import { useDisplay } from 'vuetify'
 import GroupConstellation from '~/components/GroupConstellation.vue'
 import ConfirmDelete from '~/components/ConfirmDelete.vue'
@@ -30,10 +30,17 @@ const matches = ref<UpcomingMatch[]>([])
 const loading = ref(false)
 const failed = ref('')
 
+// --- Nombre del grupo ----------------------------------------------------------
+const editingName = ref(false)
+const nameDraft = ref('')
+const nameBusy = ref(false)
+const nameError = ref('')
+
 // Se cargan solo al abrir: la página de lista se mantiene igual de liviana.
 watch(
   () => (open.value ? props.group?.id : null),
   async (id) => {
+    editingName.value = false
     if (!id) return
     loading.value = true
     failed.value = ''
@@ -56,6 +63,39 @@ watch(
     }
   },
 )
+
+function startEditName() {
+  nameDraft.value = props.group?.name ?? ''
+  nameError.value = ''
+  editingName.value = true
+}
+
+async function saveName() {
+  const g = props.group
+  if (!g) return
+  const next = nameDraft.value.trim()
+  if (next.length < 2) {
+    nameError.value = 'Escribe al menos 2 letras.'
+    return
+  }
+  if (next === g.name) {
+    editingName.value = false
+    return
+  }
+  nameBusy.value = true
+  nameError.value = ''
+  try {
+    await $fetch(`/api/groups/${g.id}`, { method: 'PATCH', body: { name: next } })
+    editingName.value = false
+    emit('changed')
+  }
+  catch (e) {
+    nameError.value = apiError(e)
+  }
+  finally {
+    nameBusy.value = false
+  }
+}
 
 const organizer = computed(() => props.group?.role === 'organizador')
 // El último que queda siempre puede cerrar el grupo, sea cual sea su rol.
@@ -186,7 +226,36 @@ const place = (m: UpcomingMatch) =>
           <p class="pl-eyebrow" :class="{ 'pl-gdlg__role--org': organizer }">
             {{ organizer ? 'Organizas este grupo' : 'Eres miembro' }}
           </p>
-          <h2 :id="`gdlg-${group.id}`" class="pl-display pl-gdlg__title">{{ group.name }}</h2>
+          <form v-if="editingName" class="pl-gdlg__nameform" @submit.prevent="saveName">
+            <v-text-field
+              v-model="nameDraft"
+              autofocus
+              maxlength="60"
+              density="compact"
+              hide-details
+              @keyup.esc="editingName = false"
+            />
+            <v-btn type="submit" size="small" color="primary" :loading="nameBusy">
+              <v-icon :icon="mdiCheck" size="18" />
+            </v-btn>
+            <v-btn size="small" variant="text" :disabled="nameBusy" @click="editingName = false">
+              <v-icon :icon="mdiClose" size="18" />
+            </v-btn>
+          </form>
+          <div v-else class="pl-gdlg__namerow">
+            <h2 :id="`gdlg-${group.id}`" class="pl-display pl-gdlg__title">{{ group.name }}</h2>
+            <button
+              v-if="organizer"
+              type="button"
+              class="pl-gdlg__editname"
+              aria-label="Editar nombre del grupo"
+              title="Editar nombre"
+              @click="startEditName"
+            >
+              <v-icon :icon="mdiPencilOutline" size="16" />
+            </button>
+          </div>
+          <p v-if="nameError" class="pl-gdlg__nameerror" role="alert">{{ nameError }}</p>
         </div>
         <button type="button" class="pl-gdlg__close" aria-label="Cerrar" @click="open = false">
           <v-icon :icon="mdiClose" size="20" />
@@ -350,9 +419,61 @@ const place = (m: UpcomingMatch) =>
 }
 
 .pl-gdlg__title {
-  margin: 0.3rem 0 0;
+  margin: 0;
   font-size: clamp(1.9rem, 7vw, 2.5rem);
   overflow-wrap: anywhere;
+}
+
+.pl-gdlg__namerow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.pl-gdlg__editname {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 1px solid var(--pl-line-strong);
+  color: var(--pl-ink-dim);
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.pl-gdlg__editname:hover {
+  border-color: var(--pl-accent);
+  color: var(--pl-accent);
+}
+
+.pl-gdlg__nameform {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+}
+
+.pl-gdlg__nameform .v-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.pl-gdlg__nameform .v-btn {
+  flex: none;
+  min-width: 36px;
+  height: 40px;
+  padding: 0;
+}
+
+.pl-gdlg__nameerror {
+  margin: 0.4rem 0 0;
+  color: var(--pl-red);
+  font-size: 0.82rem;
 }
 
 .pl-gdlg__close {

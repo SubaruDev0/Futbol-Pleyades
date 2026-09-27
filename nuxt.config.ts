@@ -32,7 +32,7 @@ export default defineNuxtConfig({
         // El mismo cúmulo del header/footer, para navegadores que soportan favicon SVG.
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
         // Respaldo para navegadores sin soporte SVG.
-        { rel: 'alternate icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'shortcut icon', type: 'image/x-icon', href: '/favicon.ico' },
       ],
     },
   },
