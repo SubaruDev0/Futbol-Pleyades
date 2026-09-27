@@ -28,12 +28,19 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
         { name: 'theme-color', content: NIGHT },
       ],
+      link: [
+        // El mismo cúmulo del header/footer, para navegadores que soportan favicon SVG.
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        // Respaldo para navegadores sin soporte SVG.
+        { rel: 'alternate icon', type: 'image/x-icon', href: '/favicon.ico' },
+      ],
     },
   },
 
   features: { inlineStyles: false },
 
   nitro: {
+    // Respaldo de image-store.ts cuando no hay CLOUDINARY_URL: los bytes van al disco.
     storage: {
       avatars: { driver: 'fs', base: './.data/avatars' },
       // Privado: solo se lee a través de /api/matches/:id/receipts/:receiptId/image.

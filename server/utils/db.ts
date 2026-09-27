@@ -13,11 +13,17 @@ let _db: Db | null = null
  * API de consulta de Drizzle, por eso el local se castea al tipo de producción
  * en vez de ampliar cada llamador.
  */
+/** Las herramientas de Neon dejan la cadena en DATABASE_URL; Nuxt la toma de
+ *  NUXT_DATABASE_URL. Se aceptan las dos, con la de Nuxt por delante. */
+function databaseUrl(): string {
+  return useRuntimeConfig().databaseUrl || process.env.DATABASE_URL || ''
+}
+
 export function useDb(): Db {
   if (_db) return _db
 
-  const url = useRuntimeConfig().databaseUrl
-  if (!url) throw new Error('NUXT_DATABASE_URL is not set')
+  const url = databaseUrl()
+  if (!url) throw new Error('Falta la cadena de conexión: define DATABASE_URL o NUXT_DATABASE_URL')
 
   _db = url.includes('.neon.tech')
     ? drizzleNeon(neon(url), { schema })
@@ -37,7 +43,7 @@ type Statement = Parameters<Db['batch']>[0][number]
  */
 export async function atomically(build: (db: Db) => Statement[]): Promise<void> {
   const db = useDb()
-  if (useRuntimeConfig().databaseUrl.includes('.neon.tech')) {
+  if (databaseUrl().includes('.neon.tech')) {
     const [first, ...rest] = build(db)
     if (first) await db.batch([first, ...rest])
     return
