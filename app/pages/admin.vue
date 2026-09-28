@@ -330,8 +330,8 @@ const typeToConfirm = computed(() =>
 // --- Agregar miembro ------------------------------------------------------------
 const addMember = reactive({ open: false, phone: '', inviteCode: '', busy: false, error: '' })
 
-function openAddMember() {
-  Object.assign(addMember, { open: true, phone: '', inviteCode: '', busy: false, error: '' })
+function openAddMember(phone = '') {
+  Object.assign(addMember, { open: true, phone, inviteCode: '', busy: false, error: '' })
 }
 
 async function submitAddMember() {
@@ -397,7 +397,7 @@ async function submitAddMember() {
           class="pl-admin__icon"
           aria-label="Agregar miembro"
           title="Agregar miembro"
-          @click="openAddMember"
+          @click="openAddMember()"
         >
           <v-icon :icon="mdiAccountPlusOutline" size="18" />
         </button>
@@ -430,6 +430,16 @@ async function submitAddMember() {
               {{ cell(row, col) }}
             </td>
             <td class="pl-admin__actions">
+              <button
+                v-if="table === 'users'"
+                type="button"
+                class="pl-admin__icon"
+                :aria-label="`Unir a un grupo a ${config.name(row)}`"
+                title="Unir a un grupo"
+                @click="openAddMember(String(row.phone))"
+              >
+                <v-icon :icon="mdiAccountPlusOutline" size="16" />
+              </button>
               <button
                 v-if="fields.length"
                 type="button"
