@@ -346,12 +346,7 @@ async function savePassword() {
   }
 }
 
-const phoneDisplay = computed(() => {
-  const p = me.value?.phone ?? ''
-  // +56954971044 → +56 9 5497 1044
-  const m = p.match(/^\+56(9)(\d{4})(\d{4})$/)
-  return m ? `+56 ${m[1]} ${m[2]} ${m[3]}` : p
-})
+const phoneDisplay = computed(() => formatPhone(me.value?.phone ?? ''))
 </script>
 
 <template>

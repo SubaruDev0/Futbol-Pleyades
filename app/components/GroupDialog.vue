@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mdiArrowRight, mdiCheck, mdiClose, mdiContentCopy, mdiMapMarkerOutline, mdiPencilOutline, mdiPlus } from '@mdi/js'
+import { mdiArrowRight, mdiCheck, mdiClose, mdiContentCopy, mdiMapMarkerOutline, mdiPencilOutline, mdiPhoneOutline, mdiPlus } from '@mdi/js'
 import { useDisplay } from 'vuetify'
 import GroupConstellation from '~/components/GroupConstellation.vue'
 import ConfirmDelete from '~/components/ConfirmDelete.vue'
@@ -12,7 +12,7 @@ const open = defineModel<boolean>({ required: true })
 /** El grupo cambió en el servidor (se salió alguien, se borró, hay nuevo organizador): la lista debe refrescarse. */
 const emit = defineEmits<{ changed: [] }>()
 
-interface Member { id: string, name: string, avatarUrl: string | null, role: string }
+interface Member { id: string, name: string, phone: string, avatarUrl: string | null, role: string }
 interface UpcomingMatch {
   id: string
   slug: string
@@ -26,6 +26,7 @@ interface UpcomingMatch {
 const { smAndDown } = useDisplay()
 
 const members = ref<Member[]>([])
+const viewing = ref<Member | null>(null)
 const matches = ref<UpcomingMatch[]>([])
 const loading = ref(false)
 const failed = ref('')
@@ -333,10 +334,12 @@ const place = (m: UpcomingMatch) =>
         <p v-if="loading" class="pl-gdlg__muted">Cargando…</p>
         <ul v-else class="pl-gdlg__members">
           <li v-for="m in members" :key="m.id" class="pl-gdlg__member">
-            <span class="pl-gdlg__av" :class="{ 'pl-gdlg__av--org': m.role === 'organizador' }">
-              <UserAvatar :name="m.name" :src="m.avatarUrl" :size="28" />
-            </span>
-            <span class="pl-gdlg__mname">{{ m.name }}</span>
+            <button type="button" class="pl-gdlg__memberbtn" @click="viewing = m">
+              <span class="pl-gdlg__av" :class="{ 'pl-gdlg__av--org': m.role === 'organizador' }">
+                <UserAvatar :name="m.name" :src="m.avatarUrl" :size="28" />
+              </span>
+              <span class="pl-gdlg__mname">{{ m.name }}</span>
+            </button>
             <span v-if="m.role === 'organizador'" class="pl-gdlg__tag">Organizador</span>
             <button
               v-else-if="organizer && m.id !== user?.id"
@@ -385,6 +388,26 @@ const place = (m: UpcomingMatch) =>
           Borrar el grupo
         </button>
       </ConfirmDelete>
+
+      <v-dialog
+        :model-value="!!viewing"
+        max-width="320"
+        content-class="pl-gdlg-wrap"
+        @update:model-value="(v: boolean) => { if (!v) viewing = null }"
+      >
+        <section v-if="viewing" class="pl-panel pl-mprofile" role="dialog" aria-labelledby="pl-mprofile-name">
+          <button type="button" class="pl-mprofile__close" aria-label="Cerrar" @click="viewing = null">
+            <v-icon :icon="mdiClose" size="18" />
+          </button>
+          <UserAvatar :name="viewing.name" :src="viewing.avatarUrl" :size="72" />
+          <h2 id="pl-mprofile-name" class="pl-display pl-mprofile__name">{{ viewing.name }}</h2>
+          <span v-if="viewing.role === 'organizador'" class="pl-gdlg__tag">Organizador</span>
+          <a :href="`tel:${viewing.phone}`" class="pl-mprofile__phone">
+            <v-icon :icon="mdiPhoneOutline" size="16" />
+            {{ formatPhone(viewing.phone) }}
+          </a>
+        </section>
+      </v-dialog>
     </section>
   </v-dialog>
 </template>
@@ -720,8 +743,24 @@ const place = (m: UpcomingMatch) =>
   padding: 0.55rem 0.85rem;
 }
 
+.pl-gdlg__memberbtn {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .pl-gdlg__av {
   display: inline-flex;
+  flex: none;
   padding: 1px;
   border: 1px solid transparent;
 }
@@ -822,5 +861,52 @@ const place = (m: UpcomingMatch) =>
 
 .pl-gdlg__instead {
   margin-top: 0.8rem;
+}
+
+.pl-mprofile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.4rem 1.2rem 1.6rem;
+  text-align: center;
+}
+
+.pl-mprofile__close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  border: 1px solid var(--pl-line-strong);
+  color: var(--pl-ink);
+  cursor: pointer;
+}
+
+.pl-mprofile__name {
+  margin: 0.4rem 0 0;
+  font-size: 1.5rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.pl-mprofile__phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+  color: var(--pl-ink-dim);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.pl-mprofile__phone:hover {
+  color: var(--pl-accent);
 }
 </style>

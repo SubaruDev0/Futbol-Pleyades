@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
     .select({
       id: schema.users.id,
       name: schema.users.name,
+      phone: schema.users.phone,
       avatarUrl: schema.users.avatarUrl,
       role: schema.groupMembers.role,
       // Si pueden cobrar — nunca los datos de la cuenta en sí.
