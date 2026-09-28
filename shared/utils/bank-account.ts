@@ -81,14 +81,17 @@ export interface PaymentAccount {
   email: string | null
 }
 
-/** El bloque que la gente pega en su app del banco, en el orden que piden los formularios chilenos. */
+/**
+ * El bloque que la gente pega en su app del banco, en el orden que piden los formularios
+ * chilenos. Sin etiquetas: son solo los valores, así el banco los detecta campo por campo.
+ */
 export function paymentAccountText(a: PaymentAccount): string {
   return [
-    `Nombre: ${a.holderName}`,
-    `RUT: ${formatRut(a.rut)}`,
-    `Banco: ${bankName(a.bank)}`,
-    `Tipo de cuenta: ${ACCOUNT_TYPE_LABEL[a.accountType]}`,
-    `N° de cuenta: ${a.accountNumber}`,
-    ...(a.email ? [`Correo: ${a.email}`] : []),
+    a.holderName,
+    formatRut(a.rut),
+    bankName(a.bank),
+    ACCOUNT_TYPE_LABEL[a.accountType],
+    a.accountNumber,
+    ...(a.email ? [a.email] : []),
   ].join('\n')
 }
