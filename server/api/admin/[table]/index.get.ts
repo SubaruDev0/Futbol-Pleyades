@@ -22,7 +22,9 @@ export default defineEventHandler(async (event) => {
             name: s.users.name,
             phone: s.users.phone,
             hasAvatar: sql<boolean>`${s.users.avatarUrl} is not null`,
-            groups: sql<number>`(select count(*)::int from ${s.groupMembers} where ${s.groupMembers.userId} = ${s.users.id})`,
+            // La tabla externa se referencia sin calificar (Drizzle no la califica dentro de un
+            // subquery correlacionado), y "id" ahí adentro sería group_members.id: siempre 0.
+            groups: sql<number>`(select count(*)::int from ${s.groupMembers} where ${s.groupMembers.userId} = users.id)`,
             createdAt: s.users.createdAt,
           })
           .from(s.users)
