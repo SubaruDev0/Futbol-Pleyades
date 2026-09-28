@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mdiClose, mdiMagnify, mdiPencilOutline, mdiRefresh, mdiTrashCanOutline } from '@mdi/js'
+import { mdiAccountPlusOutline, mdiClose, mdiMagnify, mdiPencilOutline, mdiRefresh, mdiTrashCanOutline } from '@mdi/js'
 import ConfirmDelete from '~/components/ConfirmDelete.vue'
 import { ADMIN_TABLES } from '#shared/utils/admin-tables'
 import type { AdminField, AdminTable } from '#shared/utils/admin-tables'
@@ -326,6 +326,33 @@ async function confirmDelete() {
 
 const typeToConfirm = computed(() =>
   del.row && (table.value === 'users' || table.value === 'groups') ? String(del.row.name) : undefined)
+
+// --- Agregar miembro ------------------------------------------------------------
+const addMember = reactive({ open: false, phone: '', inviteCode: '', busy: false, error: '' })
+
+function openAddMember() {
+  Object.assign(addMember, { open: true, phone: '', inviteCode: '', busy: false, error: '' })
+}
+
+async function submitAddMember() {
+  addMember.busy = true
+  addMember.error = ''
+  try {
+    const { userName, groupName } = await $fetch<{ userName: string, groupName: string }>('/api/admin/group-members', {
+      method: 'POST',
+      body: { phone: addMember.phone, inviteCode: addMember.inviteCode },
+    })
+    addMember.open = false
+    toast.success(`${userName} se sumó a «${groupName}»`)
+    await refresh()
+  }
+  catch (e) {
+    addMember.error = apiError(e)
+  }
+  finally {
+    addMember.busy = false
+  }
+}
 </script>
 
 <template>
@@ -364,6 +391,16 @@ const typeToConfirm = computed(() =>
         <span class="pl-admin__count pl-numeric">
           {{ rows.length }}<template v-if="filter"> de {{ data?.rows.length ?? 0 }}</template> filas
         </span>
+        <button
+          v-if="table === 'group_members'"
+          type="button"
+          class="pl-admin__icon"
+          aria-label="Agregar miembro"
+          title="Agregar miembro"
+          @click="openAddMember"
+        >
+          <v-icon :icon="mdiAccountPlusOutline" size="18" />
+        </button>
         <button type="button" class="pl-admin__icon" aria-label="Recargar" title="Recargar" :disabled="loading" @click="refresh()">
           <v-icon :icon="mdiRefresh" size="18" />
         </button>
@@ -488,6 +525,32 @@ const typeToConfirm = computed(() =>
       :error="del.error"
       @confirm="confirmDelete"
     />
+
+    <v-dialog v-model="addMember.open" max-width="420" :persistent="addMember.busy" content-class="pl-admin-edit-wrap">
+      <section class="pl-panel pl-admin__edit" role="dialog" aria-labelledby="pl-admin-addmember-title">
+        <header class="pl-admin__edithead">
+          <div>
+            <p class="pl-eyebrow">Miembros</p>
+            <h2 id="pl-admin-addmember-title" class="pl-display pl-admin__edittitle">Agregar miembro</h2>
+          </div>
+          <button type="button" class="pl-admin__icon" aria-label="Cerrar" :disabled="addMember.busy" @click="addMember.open = false">
+            <v-icon :icon="mdiClose" size="18" />
+          </button>
+        </header>
+
+        <form class="pl-admin__form" @submit.prevent="submitAddMember">
+          <v-text-field v-model="addMember.phone" label="Celular" placeholder="+56 9 4620 2726" />
+          <v-text-field v-model="addMember.inviteCode" label="Código del grupo" placeholder="TAU6UD" />
+
+          <p v-if="addMember.error" class="pl-admin__error" role="alert">{{ addMember.error }}</p>
+
+          <footer class="pl-admin__editactions">
+            <v-btn variant="text" :disabled="addMember.busy" @click="addMember.open = false">Cancelar</v-btn>
+            <v-btn type="submit" color="primary" :loading="addMember.busy">Agregar</v-btn>
+          </footer>
+        </form>
+      </section>
+    </v-dialog>
   </div>
 </template>
 
