@@ -28,9 +28,14 @@ watchEffect(() => {
 })
 
 const { data: members } = await useFetch(() => `/api/groups/${groupId.value}/members`, {
-  immediate: false,
+  // El grupo ya puede estar preseleccionado (arriba) para cuando esto se crea, así que
+  // "watch" solo alcanzaría un cambio posterior: sin esto, la primera carga se queda vacía.
+  immediate: !!groupId.value,
   watch: [groupId],
 })
+
+// Solo quienes ya cargaron sus datos de transferencia pueden cobrar un partido.
+const collectors = computed(() => (members.value ?? []).filter(m => m.hasPaymentAccount))
 
 const CAPACITY: Record<'f5' | 'f6' | 'f7' | 'libre', number> = {
   f5: 10,
@@ -164,7 +169,7 @@ async function submit() {
         <v-select
           v-model="collectorUserId"
           label="¿Quién recibe el dinero?"
-          :items="members ?? []"
+          :items="collectors"
           item-title="name"
           item-value="id"
           clearable
