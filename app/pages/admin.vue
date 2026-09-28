@@ -298,7 +298,7 @@ async function askDelete(row: Row) {
       method: 'DELETE',
       query: { dryRun: 1 },
     })
-    if (del.row === row) del.loss = lossFor(t, counts)
+    if (del.row?.id === row.id) del.loss = lossFor(t, counts)
   }
   catch (e) {
     del.error = apiError(e)
