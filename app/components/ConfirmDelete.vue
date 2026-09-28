@@ -42,7 +42,7 @@ const ready = computed(() =>
 
       <label v-if="typeToConfirm" class="pl-cdel__type">
         <span>Escribe <strong>{{ typeToConfirm }}</strong> para confirmar</span>
-        <input v-model="typed" type="text" autocomplete="off" spellcheck="false" :disabled="busy">
+        <input v-model="typed" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" :disabled="busy">
       </label>
 
       <p v-if="error" class="pl-cdel__error" role="alert">{{ error }}</p>

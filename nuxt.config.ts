@@ -36,6 +36,14 @@ export default defineNuxtConfig({
         // Respaldo para navegadores sin soporte SVG.
         { rel: 'shortcut icon', type: 'image/x-icon', href: '/favicon.ico' },
       ],
+      script: [
+        // Verificación de sitio y Auto ads de AdSense (sin bloques manuales: Google elige dónde mostrarlos).
+        {
+          src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6889417433081561',
+          async: true,
+          crossorigin: 'anonymous',
+        },
+      ],
     },
   },
 
