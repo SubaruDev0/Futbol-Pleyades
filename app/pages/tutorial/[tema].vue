@@ -216,6 +216,7 @@ onBeforeUnmount(() => {
       <MatchLayout v-else-if="lesson.view === 'partido' || lesson.view === 'cobrar'">
         <MatchHero
           :kickoff-at="kickoff"
+          status="convocado"
           :players="roster.players"
           :capacity="DEMO_CAPACITY"
           :seed="DEMO_SEED"

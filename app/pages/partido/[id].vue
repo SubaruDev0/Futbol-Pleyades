@@ -213,6 +213,16 @@ async function confirmRemoval() {
   }
 }
 
+async function saveSchedule(patch: { kickoffAt: Date, status: 'convocado' | 'confirmado' }) {
+  try {
+    await $fetch(`/api/matches/${matchId.value}`, { method: 'PATCH', body: patch })
+    await refresh()
+  }
+  catch (e) {
+    toast.error(apiError(e))
+  }
+}
+
 useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido') })
 </script>
 
@@ -226,6 +236,8 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
     <MatchHero
       class="pl-rise"
       :kickoff-at="match.kickoffAt"
+      :status="match.status"
+      :can-manage="!!data?.canManage"
       :players="players"
       :capacity="capacity"
       :seed="match.id"
@@ -236,6 +248,7 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
       :going="going.length"
       :per-player="data?.perPlayer"
       :notes="match.notes"
+      @save="saveSchedule"
     />
 
     <RsvpPanel
