@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { mdiClose } from '@mdi/js'
 import MatchLayout from '~/components/MatchLayout.vue'
 import MatchHero from '~/components/MatchHero.vue'
 import RsvpPanel from '~/components/RsvpPanel.vue'
@@ -22,6 +23,64 @@ onUnmounted(() => clearInterval(interval))
 const match = computed(() => data.value?.match)
 const matchId = computed(() => match.value?.id ?? id)
 const venue = computed(() => data.value?.venue ?? null)
+
+// --- Editar cancha y datos --------------------------------------------------------
+const { data: venues } = await useFetch('/api/venues')
+const { data: groupMembers } = await useFetch(() => `/api/groups/${match.value?.groupId}/members`, {
+  immediate: !!match.value,
+})
+const collectors = computed(() => (groupMembers.value ?? []).filter(m => m.hasPaymentAccount))
+
+const editDetails = reactive({
+  open: false,
+  venueId: null as string | null,
+  fieldLabel: '',
+  format: 'f7' as 'f5' | 'f6' | 'f7' | 'libre',
+  totalCost: '',
+  collectorUserId: null as string | null,
+  busy: false,
+  error: '',
+})
+
+function openEditDetails() {
+  const m = match.value
+  if (!m) return
+  Object.assign(editDetails, {
+    open: true,
+    venueId: m.venueId,
+    fieldLabel: m.fieldLabel ?? '',
+    format: m.format,
+    totalCost: m.totalCost ? String(m.totalCost) : '',
+    collectorUserId: m.collectorUserId,
+    busy: false,
+    error: '',
+  })
+}
+
+async function saveDetails() {
+  editDetails.busy = true
+  editDetails.error = ''
+  try {
+    await $fetch(`/api/matches/${matchId.value}`, {
+      method: 'PATCH',
+      body: {
+        venueId: editDetails.venueId,
+        fieldLabel: editDetails.fieldLabel.trim() || null,
+        format: editDetails.format,
+        totalCost: editDetails.totalCost ? Number(editDetails.totalCost) : null,
+        collectorUserId: editDetails.collectorUserId,
+      },
+    })
+    editDetails.open = false
+    await refresh()
+  }
+  catch (e) {
+    editDetails.error = apiError(e)
+  }
+  finally {
+    editDetails.busy = false
+  }
+}
 const place = computed(() => {
   const name = venue.value?.name
   const field = match.value?.fieldLabel
@@ -247,8 +306,10 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
       :format="match.format"
       :going="going.length"
       :per-player="data?.perPlayer"
+      :total-cost="match.totalCost"
       :notes="match.notes"
       @save="saveSchedule"
+      @edit-details="openEditDetails"
     />
 
     <RsvpPanel
@@ -267,6 +328,7 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
       class="pl-rise"
       style="--i: 2"
       :collector-name="data?.collectorName ?? null"
+      :collector-phone="data?.collectorPhone ?? null"
       :per-player="data?.perPlayer ?? null"
       :total-cost="match.totalCost"
       :account="data?.collectorAccount ?? null"
@@ -338,6 +400,62 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
       :error="removal.error"
       @confirm="confirmRemoval"
     />
+
+    <v-dialog v-model="editDetails.open" max-width="440" :persistent="editDetails.busy" content-class="pl-editd-wrap">
+      <section class="pl-panel pl-editd" role="dialog" aria-labelledby="pl-editdetails-title">
+        <header class="pl-editd__head">
+          <h2 id="pl-editdetails-title" class="pl-display pl-editd__title">Cancha y datos</h2>
+          <button type="button" class="pl-editd__icon" aria-label="Cerrar" :disabled="editDetails.busy" @click="editDetails.open = false">
+            <v-icon :icon="mdiClose" size="18" />
+          </button>
+        </header>
+
+        <form class="pl-editd__form" @submit.prevent="saveDetails">
+          <v-select
+            v-model="editDetails.format"
+            label="Formato"
+            :items="[
+              { title: '5v5 · 10 jugadores', value: 'f5' },
+              { title: '6v6 · 12 jugadores', value: 'f6' },
+              { title: '7v7 · 14 jugadores', value: 'f7' },
+              { title: 'Libre · los que lleguen', value: 'libre' },
+            ]"
+          />
+          <v-select
+            v-model="editDetails.venueId"
+            label="Recinto"
+            :items="venues ?? []"
+            item-title="name"
+            item-value="id"
+            clearable
+          />
+          <v-text-field v-model="editDetails.fieldLabel" label="Cancha" placeholder="Cancha 6" />
+          <v-text-field
+            v-model="editDetails.totalCost"
+            label="Valor de la cancha"
+            type="number"
+            inputmode="numeric"
+            prefix="$"
+            placeholder="21000"
+          />
+          <v-select
+            v-model="editDetails.collectorUserId"
+            label="¿Quién recibe el dinero?"
+            :items="collectors"
+            item-title="name"
+            item-value="id"
+            clearable
+          />
+
+          <p v-if="editDetails.error" class="pl-editd__error" role="alert">{{ editDetails.error }}</p>
+
+          <footer class="pl-editd__actions">
+            <v-btn variant="text" :disabled="editDetails.busy" @click="editDetails.open = false">Cancelar</v-btn>
+            <v-btn type="submit" color="primary" :loading="editDetails.busy">Guardar</v-btn>
+          </footer>
+        </form>
+      </section>
+    </v-dialog>
   </MatchLayout>
 </template>
 
@@ -392,5 +510,72 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
 .pl-missing {
   padding: 3rem 1.5rem;
   text-align: center;
+}
+
+:global(.pl-editd-wrap:focus-visible) {
+  outline: none;
+}
+
+.pl-editd {
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  padding: 1.1rem 1.2rem 1.2rem;
+  border-top: 2px solid var(--pl-accent);
+}
+
+.pl-editd__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pl-editd__title {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.pl-editd__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--pl-line-strong);
+  color: var(--pl-ink-dim);
+  cursor: pointer;
+}
+
+.pl-editd__icon:hover:not(:disabled) {
+  border-color: var(--pl-accent);
+  color: var(--pl-accent);
+}
+
+.pl-editd__icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pl-editd__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1.1rem;
+}
+
+.pl-editd__error {
+  margin: 0;
+  color: var(--pl-red);
+  font-size: 0.9rem;
+}
+
+.pl-editd__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.3rem;
 }
 </style>

@@ -11,8 +11,9 @@ export interface MoneyPayment {
 }
 
 /** Adónde va la plata: la división, la cuenta de quien cobra y los pagos de quien mira. */
-defineProps<{
+const props = defineProps<{
   collectorName: string | null
+  collectorPhone: string | null
   perPlayer: number | null
   totalCost: number
   account: PaymentAccount | null
@@ -22,6 +23,11 @@ defineProps<{
   hasCollector: boolean
 }>()
 const emit = defineEmits<{ upload: [id: string] }>()
+
+// wa.me quiere solo dígitos, sin el "+"; el mensaje es solo para no dejar el chat en blanco.
+const waHref = computed(() => props.collectorPhone
+  ? `https://wa.me/${props.collectorPhone.replace(/\D/g, '')}?text=${encodeURIComponent('Hola! Te mandé el comprobante de la transferencia por acá.')}`
+  : null)
 </script>
 
 <template>
@@ -71,6 +77,9 @@ const emit = defineEmits<{ upload: [id: string] }>()
         <v-btn color="primary" block class="pl-mypay__send" :disabled="!hasCollector" @click="emit('upload', p.id)">
           {{ p.receipt?.status === 'rechazado' ? 'Subir otro comprobante' : 'Ya transferí' }}
         </v-btn>
+        <a v-if="waHref" :href="waHref" target="_blank" rel="noopener" class="pl-mypay__wa">
+          Envié comprobante por WhatsApp
+        </a>
       </template>
     </div>
     <p v-if="payments.length && !hasCollector" class="pl-money__hint">
@@ -174,5 +183,20 @@ const emit = defineEmits<{ upload: [id: string] }>()
   letter-spacing: 0.02em;
   font-family: inherit;
   font-weight: 600;
+}
+
+.pl-mypay__wa {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--pl-ink-dim);
+  font-size: 0.82rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.pl-mypay__wa:hover {
+  color: var(--pl-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 </style>

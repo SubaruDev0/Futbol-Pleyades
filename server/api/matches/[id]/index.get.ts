@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
       match: schema.matches,
       venue: schema.venues,
       collectorName: collector.name,
+      collectorPhone: collector.phone,
       collectorAccount: {
         holderName: schema.paymentAccounts.holderName,
         rut: schema.paymentAccounts.rut,
@@ -104,6 +105,7 @@ export default defineEventHandler(async (event) => {
   return {
     ...detail,
     collectorAccount: canSeeAccount ? detail?.collectorAccount ?? null : null,
+    collectorPhone: canSeeAccount ? detail?.collectorPhone ?? null : null,
     match,
     canManage,
     canSettle,

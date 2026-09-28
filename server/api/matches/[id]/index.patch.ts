@@ -5,12 +5,18 @@ const body = z
   .object({
     kickoffAt: z.coerce.date(),
     status: z.enum(['convocado', 'confirmado']),
+    venueId: z.uuid().nullable(),
+    fieldLabel: z.string().trim().max(40).nullable(),
+    format: z.enum(['f5', 'f6', 'f7', 'libre']),
+    totalCost: z.number().int().min(0).max(10_000_000).nullable(),
+    collectorUserId: z.uuid().nullable(),
   })
   .partial()
-  .refine(v => v.kickoffAt !== undefined || v.status !== undefined, 'Nada que guardar')
+  .refine(v => Object.values(v).some(x => x !== undefined), 'Nada que guardar')
 
-/** El día y la hora se negocian entre el grupo antes de cerrarse: quien organiza los ajusta
- *  y marca el partido "confirmado" (verde) o lo deja "por confirmar" (amarillo). */
+/** El día, la hora, la cancha y demás detalles se negocian entre el grupo antes de cerrarse:
+ *  quien organiza los ajusta y marca el partido "confirmado" (verde) o lo deja "por confirmar"
+ *  (amarillo). */
 export default defineEventHandler(async (event) => {
   const { user } = await requireUserSession(event)
   const id = await matchIdParam(event)

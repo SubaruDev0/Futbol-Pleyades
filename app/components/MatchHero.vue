@@ -16,9 +16,18 @@ const props = defineProps<{
   format: string
   going: number
   perPlayer?: number | null
+  totalCost?: number | null
   notes?: string | null
 }>()
-const emit = defineEmits<{ save: [patch: { kickoffAt: Date, status: 'convocado' | 'confirmado' }] }>()
+
+// Lo que tocaría si se llena la cancha: para que "por jugador" no lea como el precio final
+// mientras todavía faltan confirmar.
+const atCapacity = computed(() =>
+  props.totalCost && props.capacity ? Math.ceil(props.totalCost / props.capacity) : null)
+const emit = defineEmits<{
+  save: [patch: { kickoffAt: Date, status: 'convocado' | 'confirmado' }]
+  'edit-details': []
+}>()
 
 const toLocalParts = (v: string | Date) => {
   const d = new Date(v)
@@ -96,7 +105,12 @@ function saveEdit() {
 
     <dl class="pl-facts">
       <div>
-        <dt class="pl-eyebrow">Cancha</dt>
+        <dt class="pl-eyebrow">
+          Cancha
+          <button v-if="canManage" type="button" class="pl-hero__editbtn pl-hero__editbtn--inline" aria-label="Editar cancha y datos" title="Editar cancha y datos" @click="emit('edit-details')">
+            <v-icon :icon="mdiPencilOutline" size="14" />
+          </button>
+        </dt>
         <dd>{{ place }}</dd>
         <dd v-if="address" class="pl-facts__sub">{{ address }}</dd>
         <dd v-if="mapsHref" class="pl-facts__sub">
@@ -114,6 +128,9 @@ function saveEdit() {
       <div v-if="perPlayer">
         <dt class="pl-eyebrow">Por jugador</dt>
         <dd class="pl-numeric">{{ clp(perPlayer) }}</dd>
+        <dd v-if="atCapacity && going < capacity" class="pl-facts__sub">
+          Si se llena ({{ capacity }}): {{ clp(atCapacity) }}
+        </dd>
       </div>
     </dl>
 
@@ -180,6 +197,14 @@ function saveEdit() {
 .pl-hero__editbtn:hover {
   border-color: var(--pl-accent);
   color: var(--pl-accent);
+}
+
+.pl-hero__editbtn--inline {
+  width: 20px;
+  height: 20px;
+  border: none;
+  vertical-align: middle;
+  margin-left: 0.15rem;
 }
 
 .pl-hero__editbtn--ok {

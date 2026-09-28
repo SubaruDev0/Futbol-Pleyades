@@ -236,6 +236,7 @@ onBeforeUnmount(() => {
         />
         <MatchMoney
           :collector-name="DEMO_COLLECTOR.name"
+          :collector-phone="null"
           :per-player="roster.perPlayer"
           :total-cost="DEMO_TOTAL"
           :account="DEMO_ACCOUNT"
