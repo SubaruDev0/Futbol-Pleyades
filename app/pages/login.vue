@@ -41,10 +41,10 @@ async function submit() {
   <div class="pl-auth">
     <p class="pl-eyebrow">Fútbol 5, 6 y 7</p>
     <h1 class="pl-display pl-auth__title">
-      Deja de<br>organizar<br>por chat
+      Pleyades
     </h1>
     <p class="pl-auth__sub">
-      Quién juega, dónde, a qué hora y quién ya transfirió. En un solo lugar.
+      Arma el partido, reparte el costo y sabe quién ya pagó.
     </p>
 
     <form class="pl-auth__form pl-panel" @submit.prevent="submit">
