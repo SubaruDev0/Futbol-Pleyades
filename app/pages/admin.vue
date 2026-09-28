@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mdiAccountPlusOutline, mdiClose, mdiMagnify, mdiPencilOutline, mdiRefresh, mdiTrashCanOutline } from '@mdi/js'
+import { mdiAccountPlusOutline, mdiClose, mdiKeyOutline, mdiMagnify, mdiPencilOutline, mdiRefresh, mdiTrashCanOutline } from '@mdi/js'
 import ConfirmDelete from '~/components/ConfirmDelete.vue'
 import { ADMIN_TABLES } from '#shared/utils/admin-tables'
 import type { AdminField, AdminTable } from '#shared/utils/admin-tables'
@@ -353,6 +353,34 @@ async function submitAddMember() {
     addMember.busy = false
   }
 }
+
+// --- Resetear contraseña ---------------------------------------------------------
+const resetPw = reactive({ open: false, row: null as Row | null, password: '', busy: false, error: '' })
+
+function openResetPw(row: Row) {
+  Object.assign(resetPw, { open: true, row, password: '', busy: false, error: '' })
+}
+
+async function submitResetPw() {
+  const row = resetPw.row
+  if (!row) return
+  resetPw.busy = true
+  resetPw.error = ''
+  try {
+    await $fetch(`/api/admin/users/${row.id}/password`, {
+      method: 'POST',
+      body: { password: resetPw.password },
+    })
+    resetPw.open = false
+    toast.success(`Contraseña de ${config.name(row)} actualizada`)
+  }
+  catch (e) {
+    resetPw.error = apiError(e)
+  }
+  finally {
+    resetPw.busy = false
+  }
+}
 </script>
 
 <template>
@@ -439,6 +467,16 @@ async function submitAddMember() {
                 @click="openAddMember(String(row.phone))"
               >
                 <v-icon :icon="mdiAccountPlusOutline" size="16" />
+              </button>
+              <button
+                v-if="table === 'users'"
+                type="button"
+                class="pl-admin__icon"
+                :aria-label="`Resetear contraseña de ${config.name(row)}`"
+                title="Resetear contraseña"
+                @click="openResetPw(row)"
+              >
+                <v-icon :icon="mdiKeyOutline" size="16" />
               </button>
               <button
                 v-if="fields.length"
@@ -557,6 +595,31 @@ async function submitAddMember() {
           <footer class="pl-admin__editactions">
             <v-btn variant="text" :disabled="addMember.busy" @click="addMember.open = false">Cancelar</v-btn>
             <v-btn type="submit" color="primary" :loading="addMember.busy">Agregar</v-btn>
+          </footer>
+        </form>
+      </section>
+    </v-dialog>
+
+    <v-dialog v-model="resetPw.open" max-width="420" :persistent="resetPw.busy" content-class="pl-admin-edit-wrap">
+      <section class="pl-panel pl-admin__edit" role="dialog" aria-labelledby="pl-admin-resetpw-title">
+        <header class="pl-admin__edithead">
+          <div>
+            <p class="pl-eyebrow">{{ resetPw.row ? config.name(resetPw.row) : '' }}</p>
+            <h2 id="pl-admin-resetpw-title" class="pl-display pl-admin__edittitle">Resetear contraseña</h2>
+          </div>
+          <button type="button" class="pl-admin__icon" aria-label="Cerrar" :disabled="resetPw.busy" @click="resetPw.open = false">
+            <v-icon :icon="mdiClose" size="18" />
+          </button>
+        </header>
+
+        <form class="pl-admin__form" @submit.prevent="submitResetPw">
+          <v-text-field v-model="resetPw.password" label="Contraseña nueva" placeholder="Mínimo 8 caracteres" />
+
+          <p v-if="resetPw.error" class="pl-admin__error" role="alert">{{ resetPw.error }}</p>
+
+          <footer class="pl-admin__editactions">
+            <v-btn variant="text" :disabled="resetPw.busy" @click="resetPw.open = false">Cancelar</v-btn>
+            <v-btn type="submit" color="primary" :loading="resetPw.busy">Guardar</v-btn>
           </footer>
         </form>
       </section>
