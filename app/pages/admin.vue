@@ -367,7 +367,7 @@ async function submitResetPw() {
   resetPw.busy = true
   resetPw.error = ''
   try {
-    await $fetch(`/api/admin/users/${row.id}/password`, {
+    await $fetch(`/api/admin/${table.value}/${row.id}/password`, {
       method: 'POST',
       body: { password: resetPw.password },
     })

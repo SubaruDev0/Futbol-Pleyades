@@ -8,6 +8,8 @@ const body = z.object({
 /** Para cuando alguien olvida su contraseña y no hay recuperación por SMS: el dueño la resetea a mano. */
 export default defineEventHandler(async (event) => {
   await requireAdmin(event)
+  const table = adminTableParam(event)
+  if (table !== 'users') throw createError({ statusCode: 404, statusMessage: 'No encontrado' })
   const id = getRouterParam(event, 'id') ?? ''
   const { password } = await readValidatedBody(event, body.parse)
 
