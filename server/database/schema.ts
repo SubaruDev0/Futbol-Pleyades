@@ -133,6 +133,8 @@ export const matchPlayers = pgTable(
     invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'set null' }),
     status: rsvpStatus('status').notNull(),
     kit: kit('kit'),
+    // La camiseta la puso el organizador a mano: el sorteo la respeta y reparte al resto.
+    kitLocked: boolean('kit_locked').notNull().default(false),
     paid: boolean('paid').notNull().default(false),
     // Solo aplica a un espectador: si igual reparte la cancha con quienes juegan.
     spectatorPays: boolean('spectator_pays').notNull().default(false),

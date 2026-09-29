@@ -190,6 +190,21 @@ async function setAttendance(player: SheetPlayer, patch: { status?: 'voy' | 'esp
   }
 }
 
+// Fija (o suelta) a alguien en un equipo para que el sorteo lo respete.
+async function setTeam(player: SheetPlayer, kit: 'oscuro' | 'claro' | null) {
+  busy.value = player.id
+  try {
+    await $fetch(`/api/matches/${matchId.value}/players/${player.id}`, { method: 'PATCH', body: { kit } })
+    await refresh()
+  }
+  catch (e: any) {
+    toast.error(apiError(e))
+  }
+  finally {
+    busy.value = ''
+  }
+}
+
 async function draw() {
   busy.value = 'draw'
   try {
@@ -400,6 +415,7 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
         @review="openReview"
         @remove="askRemoval('guest', $event)"
         @attendance="setAttendance"
+        @team="setTeam"
       />
 
       <details v-if="data?.canManage" class="pl-danger">

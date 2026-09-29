@@ -41,11 +41,12 @@ export default defineEventHandler(async (event) => {
   const [updated] = await db
     .update(schema.matchPlayers)
     .set({
-      ...(patch.kit !== undefined ? { kit: patch.kit } : {}),
+      // Poner una camiseta a mano la fija para el sorteo; quitarla la suelta.
+      ...(patch.kit !== undefined ? { kit: patch.kit, kitLocked: patch.kit !== null } : {}),
       ...(patch.status !== undefined ? { status: patch.status } : {}),
       ...(patch.spectatorPays !== undefined ? { spectatorPays: patch.spectatorPays } : {}),
       // Un espectador no juega: pierde la camiseta que tuviera.
-      ...(patch.status === 'espectador' ? { kit: null } : {}),
+      ...(patch.status === 'espectador' ? { kit: null, kitLocked: false } : {}),
       ...(patch.paid !== undefined ? { paid: patch.paid, paidAt: patch.paid ? now : null } : {}),
     })
     .where(eq(schema.matchPlayers.id, playerId))

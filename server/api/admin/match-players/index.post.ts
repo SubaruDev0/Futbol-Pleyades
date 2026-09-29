@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
         status,
         respondedAt: new Date(),
         spectatorPays: status === 'espectador' && spectatorPays,
-        ...(status === 'no_voy' || status === 'espectador' ? { kit: null } : {}),
+        ...(status === 'no_voy' || status === 'espectador' ? { kit: null, kitLocked: false } : {}),
       })
       .where(eq(s.matchPlayers.id, existing.id))
   }

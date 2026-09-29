@@ -50,6 +50,13 @@
       "when": 1790695747602,
       "tag": "0006_spectators",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790698672565,
+      "tag": "0007_kit_locked",
+      "breakpoints": true
     }
   ]
 }

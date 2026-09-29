@@ -9,6 +9,8 @@ export interface SheetPlayer {
   guestName: string | null
   avatarUrl: string | null
   kit: string | null
+  /** La camiseta la fijó el organizador a mano; el sorteo la respeta. */
+  kitLocked?: boolean
   paid: boolean
   spectatorPays?: boolean
   receipt: { id: string | null, status: string } | null
@@ -43,12 +45,20 @@ const emit = defineEmits<{
   review: [id: string]
   draw: []
   remove: [player: SheetPlayer]
+  team: [player: SheetPlayer, kit: 'oscuro' | 'claro' | null]
   attendance: [player: SheetPlayer, patch: { status?: 'voy' | 'espectador', spectatorPays?: boolean }]
 }>()
 
 const displayName = (p: SheetPlayer) => p.name ?? p.guestName ?? 'Sin nombre'
 
-const drawn = computed(() => props.going.some(p => p.kit))
+// Sorteado solo cuando todos tienen equipo; con equipos a medias (fijados a mano) se ve la lista.
+const drawn = computed(() => props.going.length > 0 && props.going.every(p => p.kit))
+const pinned = computed(() => props.going.filter(p => p.kitLocked && p.kit).length)
+
+/** Fija a alguien en un equipo; tocar de nuevo el equipo ya fijado lo suelta para el sorteo. */
+function pick(p: SheetPlayer, kit: 'oscuro' | 'claro') {
+  emit('team', p, p.kitLocked && p.kit === kit ? null : kit)
+}
 const teams = computed(() => [
   { key: 'dark', label: 'Oscuro', players: props.going.filter(p => p.kit === 'oscuro') },
   { key: 'light', label: 'Claro', players: props.going.filter(p => p.kit === 'claro') },
@@ -70,6 +80,11 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
             Quien organiza puede sortear los equipos al azar: oscuro contra claro. Si no
             convence, se puede sortear de nuevo.
           </p>
+          <p>
+            Con los botones <strong>O</strong> y <strong>C</strong> puedes fijar a alguien en un
+            equipo. El sorteo lo deja ahí y reparte al resto: sirve para dejar juntos a los que
+            quieren jugar en el mismo equipo. Toca de nuevo el botón para soltarlo.
+          </p>
         </InfoTip>
       </h2>
       <v-btn
@@ -79,7 +94,7 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
         :loading="busy === 'draw'"
         @click="emit('draw')"
       >
-        {{ drawn ? 'Sortear de nuevo' : 'Sortear equipos' }}
+        {{ drawn ? 'Sortear de nuevo' : pinned ? 'Sortear el resto' : 'Sortear equipos' }}
       </v-btn>
     </div>
 
@@ -92,6 +107,30 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
           <span class="pl-who">
             <UserAvatar v-if="p.userId" :name="p.name" :src="p.avatarUrl" :size="22" />
             <span class="pl-name" :class="{ 'pl-guest': !p.userId }">{{ displayName(p) }}</span>
+            <span v-if="canManage" class="pl-teampick" role="group" :aria-label="`Equipo de ${displayName(p)}`">
+              <button
+                type="button"
+                class="pl-teampick__btn pl-teampick__btn--dark"
+                :class="{ 'pl-teampick__btn--on': p.kit === 'oscuro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'oscuro' }"
+                :title="p.kitLocked && p.kit === 'oscuro' ? 'Fijado en Oscuro: toca para soltarlo al sorteo' : 'Fijar en Oscuro: el sorteo lo deja ahí'"
+                :aria-pressed="p.kitLocked && p.kit === 'oscuro'"
+                :disabled="busy === p.id"
+                @click="pick(p, 'oscuro')"
+              >
+                O
+              </button>
+              <button
+                type="button"
+                class="pl-teampick__btn pl-teampick__btn--light"
+                :class="{ 'pl-teampick__btn--on': p.kit === 'claro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'claro' }"
+                :title="p.kitLocked && p.kit === 'claro' ? 'Fijado en Claro: toca para soltarlo al sorteo' : 'Fijar en Claro: el sorteo lo deja ahí'"
+                :aria-pressed="p.kitLocked && p.kit === 'claro'"
+                :disabled="busy === p.id"
+                @click="pick(p, 'claro')"
+              >
+                C
+              </button>
+            </span>
             <button
               v-if="canManage"
               type="button"
@@ -137,6 +176,30 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
           <span class="pl-name" :class="{ 'pl-guest': !p.userId }">
             {{ displayName(p) }}
             <span v-if="!p.userId" class="pl-invited">invitado</span>
+          </span>
+          <span v-if="canManage" class="pl-teampick" role="group" :aria-label="`Equipo de ${displayName(p)}`">
+            <button
+              type="button"
+              class="pl-teampick__btn pl-teampick__btn--dark"
+              :class="{ 'pl-teampick__btn--on': p.kit === 'oscuro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'oscuro' }"
+              :title="p.kitLocked && p.kit === 'oscuro' ? 'Fijado en Oscuro: toca para soltarlo al sorteo' : 'Fijar en Oscuro: el sorteo lo deja ahí'"
+              :aria-pressed="p.kitLocked && p.kit === 'oscuro'"
+              :disabled="busy === p.id"
+              @click="pick(p, 'oscuro')"
+            >
+              O
+            </button>
+            <button
+              type="button"
+              class="pl-teampick__btn pl-teampick__btn--light"
+              :class="{ 'pl-teampick__btn--on': p.kit === 'claro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'claro' }"
+              :title="p.kitLocked && p.kit === 'claro' ? 'Fijado en Claro: toca para soltarlo al sorteo' : 'Fijar en Claro: el sorteo lo deja ahí'"
+              :aria-pressed="p.kitLocked && p.kit === 'claro'"
+              :disabled="busy === p.id"
+              @click="pick(p, 'claro')"
+            >
+              C
+            </button>
           </span>
           <button
             v-if="canManage"
@@ -191,6 +254,54 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
         <span class="pl-who">
           <UserAvatar v-if="p.userId" :name="p.name" :src="p.avatarUrl" :size="22" />
           <span class="pl-name" :class="{ 'pl-guest': !p.userId }">{{ displayName(p) }}</span>
+          <span v-if="canManage" class="pl-teampick" role="group" :aria-label="`Equipo de ${displayName(p)}`">
+            <button
+              type="button"
+              class="pl-teampick__btn pl-teampick__btn--dark"
+              :class="{ 'pl-teampick__btn--on': p.kit === 'oscuro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'oscuro' }"
+              :title="p.kitLocked && p.kit === 'oscuro' ? 'Fijado en Oscuro: toca para soltarlo al sorteo' : 'Fijar en Oscuro: el sorteo lo deja ahí'"
+              :aria-pressed="p.kitLocked && p.kit === 'oscuro'"
+              :disabled="busy === p.id"
+              @click="pick(p, 'oscuro')"
+            >
+              O
+            </button>
+            <button
+              type="button"
+              class="pl-teampick__btn pl-teampick__btn--light"
+              :class="{ 'pl-teampick__btn--on': p.kit === 'claro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'claro' }"
+              :title="p.kitLocked && p.kit === 'claro' ? 'Fijado en Claro: toca para soltarlo al sorteo' : 'Fijar en Claro: el sorteo lo deja ahí'"
+              :aria-pressed="p.kitLocked && p.kit === 'claro'"
+              :disabled="busy === p.id"
+              @click="pick(p, 'claro')"
+            >
+              C
+            </button>
+          </span>
+          <span v-if="canManage" class="pl-teampick" role="group" :aria-label="`Equipo de ${displayName(p)}`">
+            <button
+              type="button"
+              class="pl-teampick__btn pl-teampick__btn--dark"
+              :class="{ 'pl-teampick__btn--on': p.kit === 'oscuro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'oscuro' }"
+              :title="p.kitLocked && p.kit === 'oscuro' ? 'Fijado en Oscuro: toca para soltarlo al sorteo' : 'Fijar en Oscuro: el sorteo lo deja ahí'"
+              :aria-pressed="p.kitLocked && p.kit === 'oscuro'"
+              :disabled="busy === p.id"
+              @click="pick(p, 'oscuro')"
+            >
+              O
+            </button>
+            <button
+              type="button"
+              class="pl-teampick__btn pl-teampick__btn--light"
+              :class="{ 'pl-teampick__btn--on': p.kit === 'claro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'claro' }"
+              :title="p.kitLocked && p.kit === 'claro' ? 'Fijado en Claro: toca para soltarlo al sorteo' : 'Fijar en Claro: el sorteo lo deja ahí'"
+              :aria-pressed="p.kitLocked && p.kit === 'claro'"
+              :disabled="busy === p.id"
+              @click="pick(p, 'claro')"
+            >
+              C
+            </button>
+          </span>
           <button
             v-if="canManage"
             type="button"
@@ -382,5 +493,45 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
   padding: 0.1rem 0.45rem;
   font-size: 0.72rem;
   white-space: nowrap;
+}
+.pl-teampick {
+  display: inline-flex;
+  flex: none;
+  margin-left: 0.3rem;
+}
+
+.pl-teampick__btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--pl-line);
+  color: var(--pl-ink-faint);
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pl-teampick__btn + .pl-teampick__btn {
+  border-left: 0;
+}
+
+/* Lo que salió del sorteo: apenas marcado. */
+.pl-teampick__btn--on {
+  color: var(--pl-ink);
+  background: color-mix(in srgb, var(--pl-ink) 10%, transparent);
+}
+
+/* Lo que fijó el organizador a mano: relleno pleno. */
+.pl-teampick__btn--pinned {
+  background: var(--pl-accent);
+  border-color: var(--pl-accent);
+  color: var(--pl-pitch);
+}
+
+.pl-teampick__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 </style>

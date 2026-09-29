@@ -44,6 +44,7 @@ export default defineEventHandler(async (event) => {
       invitedBy: schema.matchPlayers.invitedBy,
       status: schema.matchPlayers.status,
       kit: schema.matchPlayers.kit,
+      kitLocked: schema.matchPlayers.kitLocked,
       paid: schema.matchPlayers.paid,
       spectatorPays: schema.matchPlayers.spectatorPays,
       respondedAt: schema.matchPlayers.respondedAt,
