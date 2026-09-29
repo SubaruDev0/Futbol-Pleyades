@@ -96,7 +96,7 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
               v-if="canManage"
               type="button"
               class="pl-unguest pl-tospectate"
-              title="Pasar a espectador"
+              title="Pasar a espectador: no juega ni ocupa cupo, pierde su equipo del sorteo"
               :disabled="busy === p.id"
               @click="emit('attendance', p, { status: 'espectador' })"
             >
@@ -142,7 +142,7 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
             v-if="canManage"
             type="button"
             class="pl-unguest pl-tospectate"
-            title="Pasar a espectador"
+            title="Pasar a espectador: no juega ni ocupa cupo, pierde su equipo del sorteo"
             :disabled="busy === p.id"
             @click="emit('attendance', p, { status: 'espectador' })"
           >
@@ -195,7 +195,7 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
             v-if="canManage"
             type="button"
             class="pl-unguest pl-tospectate"
-            title="Pasar a espectador"
+            title="Pasar a espectador: no juega ni ocupa cupo, pierde su equipo del sorteo"
             :disabled="busy === p.id"
             @click="emit('attendance', p, { status: 'espectador' })"
           >
@@ -236,14 +236,18 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
             <button
               type="button"
               class="pl-unguest pl-tospectate"
+              :title="p.spectatorPays
+                ? 'Deja de repartir la cancha: baja su parte y el resto paga más'
+                : 'Entra al reparto de la cancha: el valor por persona baja y puede subir comprobante'"
               :disabled="busy === p.id"
               @click="emit('attendance', p, { spectatorPays: !p.spectatorPays })"
             >
-              {{ p.spectatorPays ? 'Que no pague' : 'Que pague' }}
+              {{ p.spectatorPays ? 'No paga' : 'Sí paga' }}
             </button>
             <button
               type="button"
               class="pl-unguest pl-tospectate"
+              title="Vuelve a jugar: ocupa cupo y entra al sorteo de equipos"
               :disabled="busy === p.id"
               @click="emit('attendance', p, { status: 'voy', spectatorPays: false })"
             >
