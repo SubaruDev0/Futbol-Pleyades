@@ -68,8 +68,6 @@ const matchupText = computed(() => {
     .map((p, i) => `${i + 1}. ${displayName(p)}`)
     .join('\n')
   return [
-    'Sorteé los equipos hasta que vi algo parejo:',
-    '',
     'Equipo Claro (Blanco, Amarillo, Celeste, Gris claro, Rosado, Etc)',
     list('claro'),
     '',
