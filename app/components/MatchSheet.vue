@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mdiClose } from '@mdi/js'
+import { mdiPin } from '@mdi/js'
 
 /** Una fila de la planilla, tal como la devuelve la API del partido. */
 export interface SheetPlayer {
@@ -45,7 +45,8 @@ const emit = defineEmits<{
   review: [id: string]
   draw: []
   remove: [player: SheetPlayer]
-  team: [player: SheetPlayer, kit: 'oscuro' | 'claro' | null]
+  team: [player: SheetPlayer, kit: 'oscuro' | 'claro']
+  unpin: [player: SheetPlayer]
   attendance: [player: SheetPlayer, patch: { status?: 'voy' | 'espectador', spectatorPays?: boolean }]
 }>()
 
@@ -55,10 +56,6 @@ const displayName = (p: SheetPlayer) => p.name ?? p.guestName ?? 'Sin nombre'
 const drawn = computed(() => props.going.length > 0 && props.going.every(p => p.kit))
 const pinned = computed(() => props.going.filter(p => p.kitLocked && p.kit).length)
 
-/** Fija a alguien en un equipo; tocar de nuevo el equipo ya fijado lo suelta para el sorteo. */
-function pick(p: SheetPlayer, kit: 'oscuro' | 'claro') {
-  emit('team', p, p.kitLocked && p.kit === kit ? null : kit)
-}
 const teams = computed(() => [
   { key: 'dark', label: 'Oscuro', players: props.going.filter(p => p.kit === 'oscuro') },
   { key: 'light', label: 'Claro', players: props.going.filter(p => p.kit === 'claro') },
@@ -81,9 +78,9 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
             convence, se puede sortear de nuevo.
           </p>
           <p>
-            Con los botones <strong>O</strong> y <strong>C</strong> puedes fijar a alguien en un
-            equipo. El sorteo lo deja ahí y reparte al resto: sirve para dejar juntos a los que
-            quieren jugar en el mismo equipo. Toca de nuevo el botón para soltarlo.
+            En el menú <strong>⋯</strong> de cada jugador puedes fijarlo en un equipo. El sorteo
+            lo deja ahí y reparte al resto: sirve para dejar juntos a los que quieren jugar en el
+            mismo equipo.
           </p>
         </InfoTip>
       </h2>
@@ -106,52 +103,29 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
           <span class="pl-sheet-num">{{ i + 1 }}</span>
           <span class="pl-who">
             <UserAvatar v-if="p.userId" :name="p.name" :src="p.avatarUrl" :size="22" />
-            <span class="pl-name" :class="{ 'pl-guest': !p.userId }">{{ displayName(p) }}</span>
-            <span v-if="canManage" class="pl-teampick" role="group" :aria-label="`Equipo de ${displayName(p)}`">
-              <button
-                type="button"
-                class="pl-teampick__btn pl-teampick__btn--dark"
-                :class="{ 'pl-teampick__btn--on': p.kit === 'oscuro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'oscuro' }"
-                :title="p.kitLocked && p.kit === 'oscuro' ? 'Fijado en Oscuro: toca para soltarlo al sorteo' : 'Fijar en Oscuro: el sorteo lo deja ahí'"
-                :aria-pressed="p.kitLocked && p.kit === 'oscuro'"
-                :disabled="busy === p.id"
-                @click="pick(p, 'oscuro')"
-              >
-                O
-              </button>
-              <button
-                type="button"
-                class="pl-teampick__btn pl-teampick__btn--light"
-                :class="{ 'pl-teampick__btn--on': p.kit === 'claro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'claro' }"
-                :title="p.kitLocked && p.kit === 'claro' ? 'Fijado en Claro: toca para soltarlo al sorteo' : 'Fijar en Claro: el sorteo lo deja ahí'"
-                :aria-pressed="p.kitLocked && p.kit === 'claro'"
-                :disabled="busy === p.id"
-                @click="pick(p, 'claro')"
-              >
-                C
-              </button>
-            </span>
+            <span class="pl-name" :class="{ 'pl-guest': !p.userId }" :title="displayName(p)">{{ shortName(displayName(p)) }}</span>
             <button
-              v-if="canManage"
+              v-if="canManage && p.kitLocked && p.kit"
               type="button"
-              class="pl-unguest pl-tospectate"
-              title="Pasar a espectador: no juega ni ocupa cupo, pierde su equipo del sorteo"
-              :disabled="busy === p.id"
-              @click="emit('attendance', p, { status: 'espectador' })"
+              class="pl-pin"
+              title="Fijado en este equipo: toca para desfijar"
+              aria-label="Desfijar"
+              @click="emit('unpin', p)"
             >
-              Espectador
+              <v-icon :icon="mdiPin" size="13" />
             </button>
-            <button
-              v-if="canRemove(p)"
-              type="button"
-              class="pl-unguest"
-              :aria-label="`Quitar a ${displayName(p)}`"
-              title="Quitar invitado"
-              :disabled="busy === p.id"
-              @click="emit('remove', p)"
-            >
-              <v-icon :icon="mdiClose" size="14" />
-            </button>
+            <SheetRowMenu
+              v-if="canManage || canRemove(p)"
+              mode="playing"
+              :player="p"
+              :can-manage="canManage"
+              :can-remove="canRemove(p)"
+              :busy="busy === p.id"
+              @team="emit('team', p, $event)"
+              @unpin="emit('unpin', p)"
+              @attendance="emit('attendance', p, $event)"
+              @remove="emit('remove', p)"
+            />
           </span>
           <PayCell
             v-if="showPay"
@@ -173,55 +147,32 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
         <span class="pl-sheet-num">{{ i + 1 }}</span>
         <span class="pl-who">
           <UserAvatar v-if="p.userId" :name="p.name" :src="p.avatarUrl" :size="22" />
-          <span class="pl-name" :class="{ 'pl-guest': !p.userId }">
-            {{ displayName(p) }}
+          <span class="pl-name" :class="{ 'pl-guest': !p.userId }" :title="displayName(p)">
+            {{ shortName(displayName(p)) }}
             <span v-if="!p.userId" class="pl-invited">invitado</span>
           </span>
-          <span v-if="canManage" class="pl-teampick" role="group" :aria-label="`Equipo de ${displayName(p)}`">
-            <button
-              type="button"
-              class="pl-teampick__btn pl-teampick__btn--dark"
-              :class="{ 'pl-teampick__btn--on': p.kit === 'oscuro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'oscuro' }"
-              :title="p.kitLocked && p.kit === 'oscuro' ? 'Fijado en Oscuro: toca para soltarlo al sorteo' : 'Fijar en Oscuro: el sorteo lo deja ahí'"
-              :aria-pressed="p.kitLocked && p.kit === 'oscuro'"
-              :disabled="busy === p.id"
-              @click="pick(p, 'oscuro')"
-            >
-              O
-            </button>
-            <button
-              type="button"
-              class="pl-teampick__btn pl-teampick__btn--light"
-              :class="{ 'pl-teampick__btn--on': p.kit === 'claro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'claro' }"
-              :title="p.kitLocked && p.kit === 'claro' ? 'Fijado en Claro: toca para soltarlo al sorteo' : 'Fijar en Claro: el sorteo lo deja ahí'"
-              :aria-pressed="p.kitLocked && p.kit === 'claro'"
-              :disabled="busy === p.id"
-              @click="pick(p, 'claro')"
-            >
-              C
-            </button>
-          </span>
           <button
-            v-if="canManage"
+            v-if="canManage && p.kitLocked && p.kit"
             type="button"
-            class="pl-unguest pl-tospectate"
-            title="Pasar a espectador: no juega ni ocupa cupo, pierde su equipo del sorteo"
-            :disabled="busy === p.id"
-            @click="emit('attendance', p, { status: 'espectador' })"
+            class="pl-pin"
+            title="Fijado en este equipo: toca para desfijar"
+            aria-label="Desfijar"
+            @click="emit('unpin', p)"
           >
-            Espectador
+            <v-icon :icon="mdiPin" size="13" />
           </button>
-          <button
-            v-if="canRemove(p)"
-            type="button"
-            class="pl-unguest"
-            :aria-label="`Quitar a ${displayName(p)}`"
-            title="Quitar invitado"
-            :disabled="busy === p.id"
-            @click="emit('remove', p)"
-          >
-            <v-icon :icon="mdiClose" size="14" />
-          </button>
+          <SheetRowMenu
+            v-if="canManage || canRemove(p)"
+            mode="playing"
+            :player="p"
+            :can-manage="canManage"
+            :can-remove="canRemove(p)"
+            :busy="busy === p.id"
+            @team="emit('team', p, $event)"
+            @unpin="emit('unpin', p)"
+            @attendance="emit('attendance', p, $event)"
+            @remove="emit('remove', p)"
+          />
         </span>
         <PayCell
           v-if="showPay"
@@ -253,76 +204,31 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
         <span class="pl-sheet-num">—</span>
         <span class="pl-who">
           <UserAvatar v-if="p.userId" :name="p.name" :src="p.avatarUrl" :size="22" />
-          <span class="pl-name" :class="{ 'pl-guest': !p.userId }">{{ displayName(p) }}</span>
-          <span v-if="canManage" class="pl-teampick" role="group" :aria-label="`Equipo de ${displayName(p)}`">
-            <button
-              type="button"
-              class="pl-teampick__btn pl-teampick__btn--dark"
-              :class="{ 'pl-teampick__btn--on': p.kit === 'oscuro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'oscuro' }"
-              :title="p.kitLocked && p.kit === 'oscuro' ? 'Fijado en Oscuro: toca para soltarlo al sorteo' : 'Fijar en Oscuro: el sorteo lo deja ahí'"
-              :aria-pressed="p.kitLocked && p.kit === 'oscuro'"
-              :disabled="busy === p.id"
-              @click="pick(p, 'oscuro')"
-            >
-              O
-            </button>
-            <button
-              type="button"
-              class="pl-teampick__btn pl-teampick__btn--light"
-              :class="{ 'pl-teampick__btn--on': p.kit === 'claro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'claro' }"
-              :title="p.kitLocked && p.kit === 'claro' ? 'Fijado en Claro: toca para soltarlo al sorteo' : 'Fijar en Claro: el sorteo lo deja ahí'"
-              :aria-pressed="p.kitLocked && p.kit === 'claro'"
-              :disabled="busy === p.id"
-              @click="pick(p, 'claro')"
-            >
-              C
-            </button>
-          </span>
-          <span v-if="canManage" class="pl-teampick" role="group" :aria-label="`Equipo de ${displayName(p)}`">
-            <button
-              type="button"
-              class="pl-teampick__btn pl-teampick__btn--dark"
-              :class="{ 'pl-teampick__btn--on': p.kit === 'oscuro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'oscuro' }"
-              :title="p.kitLocked && p.kit === 'oscuro' ? 'Fijado en Oscuro: toca para soltarlo al sorteo' : 'Fijar en Oscuro: el sorteo lo deja ahí'"
-              :aria-pressed="p.kitLocked && p.kit === 'oscuro'"
-              :disabled="busy === p.id"
-              @click="pick(p, 'oscuro')"
-            >
-              O
-            </button>
-            <button
-              type="button"
-              class="pl-teampick__btn pl-teampick__btn--light"
-              :class="{ 'pl-teampick__btn--on': p.kit === 'claro', 'pl-teampick__btn--pinned': p.kitLocked && p.kit === 'claro' }"
-              :title="p.kitLocked && p.kit === 'claro' ? 'Fijado en Claro: toca para soltarlo al sorteo' : 'Fijar en Claro: el sorteo lo deja ahí'"
-              :aria-pressed="p.kitLocked && p.kit === 'claro'"
-              :disabled="busy === p.id"
-              @click="pick(p, 'claro')"
-            >
-              C
-            </button>
-          </span>
-          <button
-            v-if="canManage"
-            type="button"
-            class="pl-unguest pl-tospectate"
-            title="Pasar a espectador: no juega ni ocupa cupo, pierde su equipo del sorteo"
-            :disabled="busy === p.id"
-            @click="emit('attendance', p, { status: 'espectador' })"
-          >
-            Espectador
-          </button>
-          <button
-            v-if="canRemove(p)"
-            type="button"
-            class="pl-unguest"
-            :aria-label="`Quitar a ${displayName(p)}`"
-            title="Quitar invitado"
-            :disabled="busy === p.id"
-            @click="emit('remove', p)"
-          >
-            <v-icon :icon="mdiClose" size="14" />
-          </button>
+          <span class="pl-name" :class="{ 'pl-guest': !p.userId }" :title="displayName(p)">{{ shortName(displayName(p)) }}</span>
+          <SheetRowMenu
+            v-if="canManage || canRemove(p)"
+            mode="playing"
+            :player="p"
+            :can-manage="canManage"
+            :can-remove="canRemove(p)"
+            :busy="busy === p.id"
+            @team="emit('team', p, $event)"
+            @unpin="emit('unpin', p)"
+            @attendance="emit('attendance', p, $event)"
+            @remove="emit('remove', p)"
+          />
+          <SheetRowMenu
+            v-if="canManage || canRemove(p)"
+            mode="playing"
+            :player="p"
+            :can-manage="canManage"
+            :can-remove="canRemove(p)"
+            :busy="busy === p.id"
+            @team="emit('team', p, $event)"
+            @unpin="emit('unpin', p)"
+            @attendance="emit('attendance', p, $event)"
+            @remove="emit('remove', p)"
+          />
         </span>
         <span />
       </div>
@@ -339,32 +245,18 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
         <span class="pl-sheet-num">—</span>
         <span class="pl-who">
           <UserAvatar v-if="p.userId" :name="p.name" :src="p.avatarUrl" :size="22" />
-          <span class="pl-name" :class="{ 'pl-guest': !p.userId }">
-            {{ displayName(p) }}
+          <span class="pl-name" :class="{ 'pl-guest': !p.userId }" :title="displayName(p)">
+            {{ shortName(displayName(p)) }}
             <span class="pl-invited">{{ p.spectatorPays ? 'paga cancha' : 'no paga' }}</span>
           </span>
-          <template v-if="canManage">
-            <button
-              type="button"
-              class="pl-unguest pl-tospectate"
-              :title="p.spectatorPays
-                ? 'Deja de repartir la cancha: baja su parte y el resto paga más'
-                : 'Entra al reparto de la cancha: el valor por persona baja y puede subir comprobante'"
-              :disabled="busy === p.id"
-              @click="emit('attendance', p, { spectatorPays: !p.spectatorPays })"
-            >
-              {{ p.spectatorPays ? 'No paga' : 'Sí paga' }}
-            </button>
-            <button
-              type="button"
-              class="pl-unguest pl-tospectate"
-              title="Vuelve a jugar: ocupa cupo y entra al sorteo de equipos"
-              :disabled="busy === p.id"
-              @click="emit('attendance', p, { status: 'voy', spectatorPays: false })"
-            >
-              A la cancha
-            </button>
-          </template>
+          <SheetRowMenu
+            v-if="canManage"
+            mode="spectator"
+            :player="p"
+            can-manage
+            :busy="busy === p.id"
+            @attendance="emit('attendance', p, $event)"
+          />
         </span>
         <PayCell
           v-if="showPay && p.spectatorPays"
@@ -435,29 +327,6 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
   margin-left: 0.4rem;
 }
 
-.pl-unguest {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 24px;
-  height: 24px;
-  margin-left: 0.15rem;
-  padding: 0;
-  background: transparent;
-  border: 1px solid var(--pl-line);
-  color: var(--pl-ink-faint);
-  cursor: pointer;
-  transition:
-    border-color 140ms ease,
-    color 140ms ease;
-}
-
-.pl-unguest:hover,
-.pl-unguest:focus-visible {
-  border-color: var(--pl-red);
-  color: var(--pl-red);
-}
-
 .pl-slot-free {
   color: var(--pl-ink-faint);
   font-size: 0.9rem;
@@ -487,51 +356,19 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
     grid-template-columns: 1fr;
   }
 }
-.pl-tospectate {
-  width: auto;
-  height: auto;
-  padding: 0.1rem 0.45rem;
-  font-size: 0.72rem;
-  white-space: nowrap;
-}
-.pl-teampick {
-  display: inline-flex;
+.pl-pin {
+  display: grid;
+  place-items: center;
   flex: none;
-  margin-left: 0.3rem;
-}
-
-.pl-teampick__btn {
-  width: 22px;
-  height: 22px;
   padding: 0;
-  background: transparent;
-  border: 1px solid var(--pl-line);
-  color: var(--pl-ink-faint);
-  font-family: var(--font-display);
-  font-size: 0.72rem;
-  font-weight: 700;
+  background: none;
+  border: 0;
+  color: var(--pl-accent);
   cursor: pointer;
 }
 
-.pl-teampick__btn + .pl-teampick__btn {
-  border-left: 0;
-}
-
-/* Lo que salió del sorteo: apenas marcado. */
-.pl-teampick__btn--on {
-  color: var(--pl-ink);
-  background: color-mix(in srgb, var(--pl-ink) 10%, transparent);
-}
-
-/* Lo que fijó el organizador a mano: relleno pleno. */
-.pl-teampick__btn--pinned {
-  background: var(--pl-accent);
-  border-color: var(--pl-accent);
-  color: var(--pl-pitch);
-}
-
-.pl-teampick__btn:disabled {
-  opacity: 0.5;
-  cursor: default;
+.pl-pin:hover,
+.pl-pin:focus-visible {
+  color: var(--pl-red);
 }
 </style>

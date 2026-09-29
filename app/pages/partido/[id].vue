@@ -190,11 +190,14 @@ async function setAttendance(player: SheetPlayer, patch: { status?: 'voy' | 'esp
   }
 }
 
-// Fija (o suelta) a alguien en un equipo para que el sorteo lo respete.
-async function setTeam(player: SheetPlayer, kit: 'oscuro' | 'claro' | null) {
+// Fija a alguien en un equipo para que el sorteo lo respete, o lo desfija sin sacarlo del equipo.
+async function setTeam(player: SheetPlayer, kit: 'oscuro' | 'claro' | 'unpin') {
   busy.value = player.id
   try {
-    await $fetch(`/api/matches/${matchId.value}/players/${player.id}`, { method: 'PATCH', body: { kit } })
+    await $fetch(`/api/matches/${matchId.value}/players/${player.id}`, {
+      method: 'PATCH',
+      body: kit === 'unpin' ? { kitLocked: false } : { kit },
+    })
     await refresh()
   }
   catch (e: any) {
@@ -416,6 +419,7 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
         @remove="askRemoval('guest', $event)"
         @attendance="setAttendance"
         @team="setTeam"
+        @unpin="setTeam($event, 'unpin')"
       />
 
       <details v-if="data?.canManage" class="pl-danger">

@@ -53,3 +53,9 @@ export function mapsSearchUrl(name: string, address?: string | null): string {
   const query = address ? `${name}, ${address}` : `${name}, Concepción, Chile`
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
 }
+
+/** "Benjamin Campos" → "Benjamin C": nombre y la inicial del primer apellido, para filas angostas. */
+export function shortName(full: string): string {
+  const [first, second] = full.trim().split(/\s+/)
+  return second ? `${first} ${second[0]!.toUpperCase()}` : (first ?? full)
+}

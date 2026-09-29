@@ -7,6 +7,8 @@ const body = z.object({
   // El organizador pasa a alguien a espectador (o lo devuelve a jugar) y decide si paga cancha.
   status: z.enum(['voy', 'espectador']).optional(),
   spectatorPays: z.boolean().optional(),
+  // Soltar una fijación sin sacarlo de su equipo: el próximo sorteo puede moverlo.
+  kitLocked: z.boolean().optional(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -22,7 +24,7 @@ export default defineEventHandler(async (event) => {
   if (patch.paid !== undefined && !canSettlePayments(match, user.id, canManage)) {
     throw createError({ statusCode: 403, statusMessage: 'Solo quien cobra puede marcar pagos' })
   }
-  if ((patch.kit !== undefined || patch.status !== undefined || patch.spectatorPays !== undefined) && !canManage) {
+  if ((patch.kit !== undefined || patch.status !== undefined || patch.spectatorPays !== undefined || patch.kitLocked !== undefined) && !canManage) {
     throw createError({ statusCode: 403, statusMessage: 'No puedes modificar a otro jugador' })
   }
 
@@ -43,6 +45,7 @@ export default defineEventHandler(async (event) => {
     .set({
       // Poner una camiseta a mano la fija para el sorteo; quitarla la suelta.
       ...(patch.kit !== undefined ? { kit: patch.kit, kitLocked: patch.kit !== null } : {}),
+      ...(patch.kitLocked !== undefined ? { kitLocked: patch.kitLocked } : {}),
       ...(patch.status !== undefined ? { status: patch.status } : {}),
       ...(patch.spectatorPays !== undefined ? { spectatorPays: patch.spectatorPays } : {}),
       // Un espectador no juega: pierde la camiseta que tuviera.
