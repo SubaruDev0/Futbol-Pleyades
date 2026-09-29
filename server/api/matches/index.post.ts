@@ -49,10 +49,12 @@ export default defineEventHandler(async (event) => {
   }
 
   // Quien convoca el partido está en él. Eso tampoco se ponía en duda en el chat.
+  // Si además es quien cobra, no se paga a sí mismo: arranca pagado.
   await db.insert(schema.matchPlayers).values({
     matchId: match.id,
     userId: user.id,
     status: 'voy',
+    paid: user.id === match.collectorUserId,
   })
 
   return match

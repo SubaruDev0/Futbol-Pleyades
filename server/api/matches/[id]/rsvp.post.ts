@@ -26,9 +26,10 @@ export default defineEventHandler(async (event) => {
     .limit(1)
 
   if (!existing) {
+    // Quien cobra no se paga a sí mismo: su propia fila arranca pagada.
     const [created] = await db
       .insert(schema.matchPlayers)
-      .values({ matchId: id, userId: user.id, status })
+      .values({ matchId: id, userId: user.id, status, paid: user.id === match.collectorUserId })
       .returning()
     return created
   }

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 const body = z
   .object({
@@ -29,6 +29,15 @@ export default defineEventHandler(async (event) => {
   }
 
   const patch = await readValidatedBody(event, body.parse)
-  await useDb().update(schema.matches).set(patch).where(eq(schema.matches.id, id))
+  const db = useDb()
+  await db.update(schema.matches).set(patch).where(eq(schema.matches.id, id))
+
+  // Quien pasa a cobrar no se paga a sí mismo: si ya estaba anotado, queda pagado.
+  if (patch.collectorUserId && patch.collectorUserId !== match.collectorUserId) {
+    await db.update(schema.matchPlayers)
+      .set({ paid: true })
+      .where(and(eq(schema.matchPlayers.matchId, id), eq(schema.matchPlayers.userId, patch.collectorUserId)))
+  }
+
   return { ok: true }
 })
