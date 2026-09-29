@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mdiPin } from '@mdi/js'
+import { mdiCheck, mdiContentCopy, mdiSwapHorizontal } from '@mdi/js'
 
 /** Una fila de la planilla, tal como la devuelve la API del partido. */
 export interface SheetPlayer {
@@ -9,8 +9,8 @@ export interface SheetPlayer {
   guestName: string | null
   avatarUrl: string | null
   kit: string | null
-  /** La camiseta la fijó el organizador a mano; el sorteo la respeta. */
-  kitLocked?: boolean
+  /** Grupo de ligados: los que comparten número siempre quedan en el mismo equipo. */
+  linkGroup?: number | null
   paid: boolean
   spectatorPays?: boolean
   receipt: { id: string | null, status: string } | null
@@ -45,21 +45,38 @@ const emit = defineEmits<{
   review: [id: string]
   draw: []
   remove: [player: SheetPlayer]
-  team: [player: SheetPlayer, kit: 'oscuro' | 'claro']
-  unpin: [player: SheetPlayer]
+  link: [player: SheetPlayer, group: number | null]
+  swap: []
   attendance: [player: SheetPlayer, patch: { status?: 'voy' | 'espectador', spectatorPays?: boolean }]
 }>()
 
 const displayName = (p: SheetPlayer) => p.name ?? p.guestName ?? 'Sin nombre'
 
-// Sorteado solo cuando todos tienen equipo; con equipos a medias (fijados a mano) se ve la lista.
+// Sorteado solo cuando todos tienen equipo.
 const drawn = computed(() => props.going.length > 0 && props.going.every(p => p.kit))
-const pinned = computed(() => props.going.filter(p => p.kitLocked && p.kit).length)
 
 const teams = computed(() => [
   { key: 'dark', label: 'Oscuro', players: props.going.filter(p => p.kit === 'oscuro') },
   { key: 'light', label: 'Claro', players: props.going.filter(p => p.kit === 'claro') },
 ])
+
+// El enfrentamiento en texto plano, listo para pegar en el grupo de WhatsApp.
+const { copied, copy } = useCopy()
+const matchupText = computed(() => {
+  const list = (kit: string) => props.going
+    .filter(p => p.kit === kit)
+    .map((p, i) => `${i + 1}. ${displayName(p)}`)
+    .join('\n')
+  return [
+    'Sorteé los equipos hasta que vi algo parejo:',
+    '',
+    'Equipo Claro (Blanco, Amarillo, Celeste, Gris claro, Rosado, Etc)',
+    list('claro'),
+    '',
+    'Equipo Oscuro (Negro, Azul oscuro, Verde oscuro, Café, Morado oscuro, Etc)',
+    list('oscuro'),
+  ].join('\n')
+})
 const starters = computed(() => props.going.slice(0, props.capacity))
 const subs = computed(() => props.going.slice(props.capacity))
 const canRemove = (p: SheetPlayer) => !p.userId && !!props.removable?.includes(p.id)
@@ -78,21 +95,45 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
             convence, se puede sortear de nuevo.
           </p>
           <p>
-            En el menú <strong>⋯</strong> de cada jugador puedes fijarlo en un equipo. El sorteo
-            lo deja ahí y reparte al resto: sirve para dejar juntos a los que quieren jugar en el
-            mismo equipo.
+            En el menú <strong>⋯</strong> de cada jugador puedes ligarlo a un grupo (1, 2, 3…).
+            Los que comparten número siempre quedan en el mismo equipo, sin importar a cuál
+            toque en el sorteo. Con <strong>Cambiar colores</strong> los equipos se quedan
+            igual y solo intercambian la camiseta.
           </p>
         </InfoTip>
       </h2>
-      <v-btn
-        v-if="canDraw && going.length >= 2"
-        size="small"
-        variant="outlined"
-        :loading="busy === 'draw'"
-        @click="emit('draw')"
-      >
-        {{ drawn ? 'Sortear de nuevo' : pinned ? 'Sortear el resto' : 'Sortear equipos' }}
-      </v-btn>
+      <div v-if="drawn || (canDraw && going.length >= 2)" class="pl-sheet__actions">
+        <v-btn
+          v-if="drawn"
+          size="small"
+          variant="text"
+          :prepend-icon="copied === 'matchup' ? mdiCheck : mdiContentCopy"
+          title="Copia los equipos en texto para pegarlos en WhatsApp"
+          @click="copy(matchupText, 'matchup')"
+        >
+          {{ copied === 'matchup' ? 'Copiado' : 'Copiar equipos' }}
+        </v-btn>
+        <v-btn
+          v-if="drawn && canDraw"
+          size="small"
+          variant="text"
+          :prepend-icon="mdiSwapHorizontal"
+          :loading="busy === 'swap'"
+          title="Los integrantes no cambian: solo se intercambian oscuro y claro"
+          @click="emit('swap')"
+        >
+          Cambiar colores
+        </v-btn>
+        <v-btn
+          v-if="canDraw"
+          size="small"
+          variant="outlined"
+          :loading="busy === 'draw'"
+          @click="emit('draw')"
+        >
+          {{ drawn ? 'Sortear de nuevo' : 'Sortear equipos' }}
+        </v-btn>
+      </div>
     </div>
 
     <!-- Sorteado: dos camisetas enfrentadas en la línea central -->
@@ -104,16 +145,7 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
           <span class="pl-who">
             <UserAvatar v-if="p.userId" :name="p.name" :src="p.avatarUrl" :size="22" />
             <span class="pl-name" :class="{ 'pl-guest': !p.userId }" :title="displayName(p)">{{ shortName(displayName(p)) }}</span>
-            <button
-              v-if="canManage && p.kitLocked && p.kit"
-              type="button"
-              class="pl-pin"
-              title="Fijado en este equipo: toca para desfijar"
-              aria-label="Desfijar"
-              @click="emit('unpin', p)"
-            >
-              <v-icon :icon="mdiPin" size="13" />
-            </button>
+            <span v-if="p.linkGroup" class="pl-link" :title="`Ligado en el grupo ${p.linkGroup}: siempre juega con los otros del grupo `">{{ p.linkGroup }}</span>
             <SheetRowMenu
               v-if="canManage || canRemove(p)"
               mode="playing"
@@ -121,8 +153,7 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
               :can-manage="canManage"
               :can-remove="canRemove(p)"
               :busy="busy === p.id"
-              @team="emit('team', p, $event)"
-              @unpin="emit('unpin', p)"
+              @link="emit('link', p, $event)"
               @attendance="emit('attendance', p, $event)"
               @remove="emit('remove', p)"
             />
@@ -151,16 +182,7 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
             {{ shortName(displayName(p)) }}
             <span v-if="!p.userId" class="pl-invited">invitado</span>
           </span>
-          <button
-            v-if="canManage && p.kitLocked && p.kit"
-            type="button"
-            class="pl-pin"
-            title="Fijado en este equipo: toca para desfijar"
-            aria-label="Desfijar"
-            @click="emit('unpin', p)"
-          >
-            <v-icon :icon="mdiPin" size="13" />
-          </button>
+          <span v-if="p.linkGroup" class="pl-link" :title="`Ligado en el grupo ${p.linkGroup}: siempre juega con los otros del grupo `">{{ p.linkGroup }}</span>
           <SheetRowMenu
             v-if="canManage || canRemove(p)"
             mode="playing"
@@ -168,8 +190,7 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
             :can-manage="canManage"
             :can-remove="canRemove(p)"
             :busy="busy === p.id"
-            @team="emit('team', p, $event)"
-            @unpin="emit('unpin', p)"
+            @link="emit('link', p, $event)"
             @attendance="emit('attendance', p, $event)"
             @remove="emit('remove', p)"
           />
@@ -212,20 +233,7 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
             :can-manage="canManage"
             :can-remove="canRemove(p)"
             :busy="busy === p.id"
-            @team="emit('team', p, $event)"
-            @unpin="emit('unpin', p)"
-            @attendance="emit('attendance', p, $event)"
-            @remove="emit('remove', p)"
-          />
-          <SheetRowMenu
-            v-if="canManage || canRemove(p)"
-            mode="playing"
-            :player="p"
-            :can-manage="canManage"
-            :can-remove="canRemove(p)"
-            :busy="busy === p.id"
-            @team="emit('team', p, $event)"
-            @unpin="emit('unpin', p)"
+            @link="emit('link', p, $event)"
             @attendance="emit('attendance', p, $event)"
             @remove="emit('remove', p)"
           />
@@ -356,19 +364,24 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
     grid-template-columns: 1fr;
   }
 }
-.pl-pin {
-  display: grid;
-  place-items: center;
-  flex: none;
-  padding: 0;
-  background: none;
-  border: 0;
-  color: var(--pl-accent);
-  cursor: pointer;
+
+.pl-sheet__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-.pl-pin:hover,
-.pl-pin:focus-visible {
-  color: var(--pl-red);
+.pl-link {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.05rem;
+  height: 1.05rem;
+  border: 1px solid var(--pl-accent);
+  color: var(--pl-accent);
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
 }
 </style>

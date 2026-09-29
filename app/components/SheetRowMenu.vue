@@ -17,14 +17,13 @@ const props = defineProps<{
   busy?: boolean
 }>()
 const emit = defineEmits<{
-  team: [kit: 'oscuro' | 'claro']
-  unpin: []
+  link: [group: number | null]
   attendance: [patch: { status?: 'voy' | 'espectador', spectatorPays?: boolean }]
   remove: []
 }>()
 
-const pinnedTo = (kit: 'oscuro' | 'claro') => !!props.player.kitLocked && props.player.kit === kit
-const pick = (kit: 'oscuro' | 'claro') => (pinnedTo(kit) ? emit('unpin') : emit('team', kit))
+const GROUPS = [1, 2, 3, 4, 5]
+const pick = (group: number) => emit('link', props.player.linkGroup === group ? null : group)
 </script>
 
 <template>
@@ -45,38 +44,21 @@ const pick = (kit: 'oscuro' | 'claro') => (pinnedTo(kit) ? emit('unpin') : emit(
 
     <div class="pl-rowmenu" role="menu">
       <template v-if="mode === 'playing' && canManage">
-        <p class="pl-rowmenu__label">Equipo</p>
+        <p class="pl-rowmenu__label">Ligar con</p>
         <button
+          v-for="g in GROUPS"
+          :key="g"
           type="button"
           class="pl-rowmenu__item"
           role="menuitem"
-          title="El sorteo lo deja en Oscuro y reparte al resto"
-          @click="pick('oscuro')"
+          :title="player.linkGroup === g
+            ? 'Toca para desligarlo'
+            : `Todos los del grupo ${g} quedan siempre en el mismo equipo, salgan donde salgan en el sorteo`"
+          @click="pick(g)"
         >
-          <span class="pl-kit pl-kit--dark" />
-          {{ pinnedTo('oscuro') ? 'Fijado en Oscuro · soltar' : 'Fijar en Oscuro' }}
-          <v-icon v-if="pinnedTo('oscuro')" :icon="mdiCheck" size="16" class="pl-rowmenu__check" />
-        </button>
-        <button
-          type="button"
-          class="pl-rowmenu__item"
-          role="menuitem"
-          title="El sorteo lo deja en Claro y reparte al resto"
-          @click="pick('claro')"
-        >
-          <span class="pl-kit pl-kit--light" />
-          {{ pinnedTo('claro') ? 'Fijado en Claro · soltar' : 'Fijar en Claro' }}
-          <v-icon v-if="pinnedTo('claro')" :icon="mdiCheck" size="16" class="pl-rowmenu__check" />
-        </button>
-        <button
-          v-if="player.kitLocked"
-          type="button"
-          class="pl-rowmenu__item"
-          role="menuitem"
-          title="Sigue en su equipo, pero el próximo sorteo puede moverlo"
-          @click="emit('unpin')"
-        >
-          Desfijar
+          <span class="pl-link">{{ g }}</span>
+          {{ player.linkGroup === g ? `Grupo ${g} · desligar` : `Grupo ${g}` }}
+          <v-icon v-if="player.linkGroup === g" :icon="mdiCheck" size="16" class="pl-rowmenu__check" />
         </button>
         <button
           type="button"
@@ -201,6 +183,18 @@ const pick = (kit: 'oscuro' | 'claro') => (pinnedTo(kit) ? emit('unpin') : emit(
 .pl-rowmenu__item--danger:hover,
 .pl-rowmenu__item--danger:focus-visible {
   color: var(--pl-red);
+}
+
+.pl-link {
+  display: inline-grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 1px solid var(--pl-accent);
+  color: var(--pl-accent);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 .pl-rowmenu__check {

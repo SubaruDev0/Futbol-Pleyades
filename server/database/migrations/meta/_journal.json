@@ -57,6 +57,13 @@
       "when": 1790698672565,
       "tag": "0007_kit_locked",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790700000000,
+      "tag": "0008_link_group",
+      "breakpoints": true
     }
   ]
 }

@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
       respondedAt: new Date(),
       spectatorPays: status === 'espectador' && spectatorPays,
       // Bajarse o pasar a espectador libera la camiseta.
-      ...(status === 'no_voy' || status === 'espectador' ? { kit: null, kitLocked: false } : {}),
+      ...(status === 'no_voy' || status === 'espectador' ? { kit: null, linkGroup: null } : {}),
     })
     .where(eq(schema.matchPlayers.id, existing.id))
     .returning()

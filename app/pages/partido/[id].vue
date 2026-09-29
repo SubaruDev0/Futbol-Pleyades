@@ -190,14 +190,26 @@ async function setAttendance(player: SheetPlayer, patch: { status?: 'voy' | 'esp
   }
 }
 
-// Fija a alguien en un equipo para que el sorteo lo respete, o lo desfija sin sacarlo del equipo.
-async function setTeam(player: SheetPlayer, kit: 'oscuro' | 'claro' | 'unpin') {
+// Liga a alguien con un grupo (o lo desliga): los del mismo grupo siempre caen en el mismo equipo.
+async function setLink(player: SheetPlayer, linkGroup: number | null) {
   busy.value = player.id
   try {
-    await $fetch(`/api/matches/${matchId.value}/players/${player.id}`, {
-      method: 'PATCH',
-      body: kit === 'unpin' ? { kitLocked: false } : { kit },
-    })
+    await $fetch(`/api/matches/${matchId.value}/players/${player.id}`, { method: 'PATCH', body: { linkGroup } })
+    await refresh()
+  }
+  catch (e: any) {
+    toast.error(apiError(e))
+  }
+  finally {
+    busy.value = ''
+  }
+}
+
+// Intercambia oscuro y claro sin tocar a los integrantes de cada equipo.
+async function swapKits() {
+  busy.value = 'swap'
+  try {
+    await $fetch(`/api/matches/${matchId.value}/teams/swap`, { method: 'POST' })
     await refresh()
   }
   catch (e: any) {
@@ -418,8 +430,8 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
         @review="openReview"
         @remove="askRemoval('guest', $event)"
         @attendance="setAttendance"
-        @team="setTeam"
-        @unpin="setTeam($event, 'unpin')"
+        @link="setLink"
+        @swap="swapKits"
       />
 
       <details v-if="data?.canManage" class="pl-danger">

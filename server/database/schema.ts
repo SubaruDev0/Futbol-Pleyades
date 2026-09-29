@@ -5,6 +5,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -134,7 +135,7 @@ export const matchPlayers = pgTable(
     status: rsvpStatus('status').notNull(),
     kit: kit('kit'),
     // La camiseta la puso el organizador a mano: el sorteo la respeta y reparte al resto.
-    kitLocked: boolean('kit_locked').notNull().default(false),
+    linkGroup: smallint('link_group'),
     paid: boolean('paid').notNull().default(false),
     // Solo aplica a un espectador: si igual reparte la cancha con quienes juegan.
     spectatorPays: boolean('spectator_pays').notNull().default(false),
