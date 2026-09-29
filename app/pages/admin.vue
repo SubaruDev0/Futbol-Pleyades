@@ -381,6 +381,33 @@ async function submitResetPw() {
     resetPw.busy = false
   }
 }
+
+// --- Anotar a alguien a un partido ------------------------------------------------
+const addPlayer = reactive({ open: false, phone: '', matchRef: '', status: 'voy' as 'voy' | 'no_voy' | 'quizas', busy: false, error: '' })
+
+function openAddPlayer() {
+  Object.assign(addPlayer, { open: true, phone: '', matchRef: '', status: 'voy', busy: false, error: '' })
+}
+
+async function submitAddPlayer() {
+  addPlayer.busy = true
+  addPlayer.error = ''
+  try {
+    const { userName, matchSlug } = await $fetch<{ userName: string, matchSlug: string }>('/api/admin/match-players', {
+      method: 'POST',
+      body: { phone: addPlayer.phone, matchRef: addPlayer.matchRef, status: addPlayer.status },
+    })
+    addPlayer.open = false
+    toast.success(`${userName} quedó anotado en «${matchSlug}»`)
+    await refresh()
+  }
+  catch (e) {
+    addPlayer.error = apiError(e)
+  }
+  finally {
+    addPlayer.busy = false
+  }
+}
 </script>
 
 <template>
@@ -426,6 +453,16 @@ async function submitResetPw() {
           aria-label="Agregar miembro"
           title="Agregar miembro"
           @click="openAddMember()"
+        >
+          <v-icon :icon="mdiAccountPlusOutline" size="18" />
+        </button>
+        <button
+          v-if="table === 'match_players'"
+          type="button"
+          class="pl-admin__icon"
+          aria-label="Anotar a alguien"
+          title="Anotar a alguien"
+          @click="openAddPlayer()"
         >
           <v-icon :icon="mdiAccountPlusOutline" size="18" />
         </button>
@@ -620,6 +657,41 @@ async function submitResetPw() {
           <footer class="pl-admin__editactions">
             <v-btn variant="text" :disabled="resetPw.busy" @click="resetPw.open = false">Cancelar</v-btn>
             <v-btn type="submit" color="primary" :loading="resetPw.busy">Guardar</v-btn>
+          </footer>
+        </form>
+      </section>
+    </v-dialog>
+
+    <v-dialog v-model="addPlayer.open" max-width="420" :persistent="addPlayer.busy" content-class="pl-admin-edit-wrap">
+      <section class="pl-panel pl-admin__edit" role="dialog" aria-labelledby="pl-admin-addplayer-title">
+        <header class="pl-admin__edithead">
+          <div>
+            <p class="pl-eyebrow">Anotados</p>
+            <h2 id="pl-admin-addplayer-title" class="pl-display pl-admin__edittitle">Anotar a alguien</h2>
+          </div>
+          <button type="button" class="pl-admin__icon" aria-label="Cerrar" :disabled="addPlayer.busy" @click="addPlayer.open = false">
+            <v-icon :icon="mdiClose" size="18" />
+          </button>
+        </header>
+
+        <form class="pl-admin__form" @submit.prevent="submitAddPlayer">
+          <v-text-field v-model="addPlayer.phone" label="Celular" placeholder="+56 9 4620 2726" />
+          <v-text-field v-model="addPlayer.matchRef" label="Slug del partido" placeholder="fushipelota-2-0-3-oct-17h" />
+          <v-select
+            v-model="addPlayer.status"
+            label="Respuesta"
+            :items="[
+              { title: 'Voy', value: 'voy' },
+              { title: 'Quizás', value: 'quizas' },
+              { title: 'No voy', value: 'no_voy' },
+            ]"
+          />
+
+          <p v-if="addPlayer.error" class="pl-admin__error" role="alert">{{ addPlayer.error }}</p>
+
+          <footer class="pl-admin__editactions">
+            <v-btn variant="text" :disabled="addPlayer.busy" @click="addPlayer.open = false">Cancelar</v-btn>
+            <v-btn type="submit" color="primary" :loading="addPlayer.busy">Anotar</v-btn>
           </footer>
         </form>
       </section>
