@@ -45,6 +45,7 @@ export default defineEventHandler(async (event) => {
       status: schema.matchPlayers.status,
       kit: schema.matchPlayers.kit,
       paid: schema.matchPlayers.paid,
+      spectatorPays: schema.matchPlayers.spectatorPays,
       respondedAt: schema.matchPlayers.respondedAt,
     })
     .from(schema.matchPlayers)
@@ -52,7 +53,7 @@ export default defineEventHandler(async (event) => {
     .where(eq(schema.matchPlayers.matchId, id))
     .orderBy(asc(schema.matchPlayers.respondedAt))
 
-  const going = players.filter(p => p.status === 'voy')
+  const payers = players.filter(sharesCost)
   const canSettle = canSettlePayments(match, user.id, canManage)
 
   // El último comprobante por fila. Solo uno abierto (pendiente o rechazado) dice
@@ -99,8 +100,8 @@ export default defineEventHandler(async (event) => {
 
   // Los datos de transferencia llegan solo a quienes juegan este partido (y a
   // quien cobra), nunca a todos los miembros del grupo.
-  const isPlaying = players.some(p => p.userId === user.id && p.status !== 'no_voy')
-  const canSeeAccount = isPlaying || match.collectorUserId === user.id
+  const isPaying = players.some(p => p.userId === user.id && (p.status === 'voy' || p.status === 'quizas' || sharesCost(p)))
+  const canSeeAccount = isPaying || match.collectorUserId === user.id
 
   return {
     ...detail,
@@ -113,6 +114,6 @@ export default defineEventHandler(async (event) => {
     pendingReceipts,
     // La división que el chat recalculaba a mano cada vez.
     perPlayer:
-      match.totalCost && going.length ? Math.ceil(match.totalCost / going.length) : null,
+      match.totalCost && payers.length ? Math.ceil(match.totalCost / payers.length) : null,
   }
 })

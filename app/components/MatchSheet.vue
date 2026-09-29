@@ -10,6 +10,7 @@ export interface SheetPlayer {
   avatarUrl: string | null
   kit: string | null
   paid: boolean
+  spectatorPays?: boolean
   receipt: { id: string | null, status: string } | null
 }
 
@@ -20,6 +21,10 @@ export interface SheetPlayer {
 const props = defineProps<{
   /** Todos los que dijeron "voy", en orden de llegada. */
   going: SheetPlayer[]
+  /** Quienes miran sin jugar: no ocupan cupo ni entran al sorteo, y pueden o no repartir la cancha. */
+  spectators?: SheetPlayer[]
+  /** Quien mira es organizador: puede pasar filas a espectador y de vuelta. */
+  canManage?: boolean
   /** Nombres de quienes dijeron que no vienen o que tal vez. */
   out: string[]
   capacity: number
@@ -38,6 +43,7 @@ const emit = defineEmits<{
   review: [id: string]
   draw: []
   remove: [player: SheetPlayer]
+  attendance: [player: SheetPlayer, patch: { status?: 'voy' | 'espectador', spectatorPays?: boolean }]
 }>()
 
 const displayName = (p: SheetPlayer) => p.name ?? p.guestName ?? 'Sin nombre'
@@ -87,6 +93,16 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
             <UserAvatar v-if="p.userId" :name="p.name" :src="p.avatarUrl" :size="22" />
             <span class="pl-name" :class="{ 'pl-guest': !p.userId }">{{ displayName(p) }}</span>
             <button
+              v-if="canManage"
+              type="button"
+              class="pl-unguest pl-tospectate"
+              title="Pasar a espectador"
+              :disabled="busy === p.id"
+              @click="emit('attendance', p, { status: 'espectador' })"
+            >
+              Espectador
+            </button>
+            <button
               v-if="canRemove(p)"
               type="button"
               class="pl-unguest"
@@ -122,6 +138,16 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
             {{ displayName(p) }}
             <span v-if="!p.userId" class="pl-invited">invitado</span>
           </span>
+          <button
+            v-if="canManage"
+            type="button"
+            class="pl-unguest pl-tospectate"
+            title="Pasar a espectador"
+            :disabled="busy === p.id"
+            @click="emit('attendance', p, { status: 'espectador' })"
+          >
+            Espectador
+          </button>
           <button
             v-if="canRemove(p)"
             type="button"
@@ -166,6 +192,16 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
           <UserAvatar v-if="p.userId" :name="p.name" :src="p.avatarUrl" :size="22" />
           <span class="pl-name" :class="{ 'pl-guest': !p.userId }">{{ displayName(p) }}</span>
           <button
+            v-if="canManage"
+            type="button"
+            class="pl-unguest pl-tospectate"
+            title="Pasar a espectador"
+            :disabled="busy === p.id"
+            @click="emit('attendance', p, { status: 'espectador' })"
+          >
+            Espectador
+          </button>
+          <button
             v-if="canRemove(p)"
             type="button"
             class="pl-unguest"
@@ -178,6 +214,54 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
           </button>
         </span>
         <span />
+      </div>
+    </div>
+
+    <div v-if="spectators?.length" class="pl-subs pl-panel">
+      <p class="pl-eyebrow">
+        Espectadores
+        <InfoTip title="Espectadores">
+          <p>No juegan, no ocupan cupo y no entran al sorteo. Si pagan, entran al reparto de la cancha.</p>
+        </InfoTip>
+      </p>
+      <div v-for="p in spectators" :key="p.id" class="pl-sheet-row">
+        <span class="pl-sheet-num">—</span>
+        <span class="pl-who">
+          <UserAvatar v-if="p.userId" :name="p.name" :src="p.avatarUrl" :size="22" />
+          <span class="pl-name" :class="{ 'pl-guest': !p.userId }">
+            {{ displayName(p) }}
+            <span class="pl-invited">{{ p.spectatorPays ? 'paga cancha' : 'no paga' }}</span>
+          </span>
+          <template v-if="canManage">
+            <button
+              type="button"
+              class="pl-unguest pl-tospectate"
+              :disabled="busy === p.id"
+              @click="emit('attendance', p, { spectatorPays: !p.spectatorPays })"
+            >
+              {{ p.spectatorPays ? 'Que no pague' : 'Que pague' }}
+            </button>
+            <button
+              type="button"
+              class="pl-unguest pl-tospectate"
+              :disabled="busy === p.id"
+              @click="emit('attendance', p, { status: 'voy', spectatorPays: false })"
+            >
+              A la cancha
+            </button>
+          </template>
+        </span>
+        <PayCell
+          v-if="showPay && p.spectatorPays"
+          :paid="p.paid"
+          :receipt="p.receipt"
+          :can-settle="canSettle"
+          :collects="collects(p)"
+          :busy="busy === p.id"
+          @toggle="emit('toggle', p)"
+          @review="emit('review', p.id)"
+        />
+        <span v-else />
       </div>
     </div>
 
@@ -287,5 +371,12 @@ const collects = (p: SheetPlayer) => !!p.userId && p.userId === props.collectorU
   .pl-teams {
     grid-template-columns: 1fr;
   }
+}
+.pl-tospectate {
+  width: auto;
+  height: auto;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 </style>

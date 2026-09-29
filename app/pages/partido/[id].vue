@@ -89,13 +89,14 @@ const place = computed(() => {
 })
 const mapsHref = computed(() => (venue.value ? mapsSearchUrl(venue.value.name, venue.value.address) : null))
 const players = computed(() => data.value?.players ?? [])
-const going = computed(() => players.value.filter(p => p.status === 'voy'))
-const out = computed(() => players.value.filter(p => p.status !== 'voy'))
+const going = computed(() => players.value.filter(isPlaying))
+const spectators = computed(() => players.value.filter(isSpectator))
+const out = computed(() => players.value.filter(p => !isPlaying(p) && !isSpectator(p)))
 
 const me = computed(() => players.value.find(p => p.userId === user.value?.id))
 const isCollector = computed(() => !!user.value && match.value?.collectorUserId === user.value.id)
 // Refleja la regla del servidor: solo los que juegan (y quien cobra) ven los datos.
-const canSeeAccount = computed(() => (!!me.value && me.value.status !== 'no_voy') || isCollector.value)
+const canSeeAccount = computed(() => (!!me.value && me.value.status !== 'no_voy' && (!isSpectator(me.value) || me.value.spectatorPays)) || isCollector.value)
 const capacity = computed(() => match.value?.capacity ?? 0)
 
 const busy = ref('')
@@ -116,7 +117,7 @@ const pendingReceipts = computed(() => data.value?.pendingReceipts ?? [])
 const myPayments = computed(() => {
   const uid = user.value?.id
   if (!uid || isCollector.value) return []
-  return going.value.filter(p => p.userId === uid || (!p.userId && p.invitedBy === uid))
+  return players.value.filter(p => sharesCost(p) && (p.userId === uid || (!p.userId && p.invitedBy === uid)))
 })
 const payLabel = (p: Player) => (p.userId ? 'Tu pago' : `Invitado: ${displayName(p)}`)
 const moneyPayments = computed<MoneyPayment[]>(() =>
@@ -142,10 +143,10 @@ function openReview(playerId: string) {
   reviewing.open = true
 }
 
-async function setStatus(status: string) {
+async function setStatus(status: string, spectatorPays = false) {
   busy.value = status
   try {
-    await $fetch(`/api/matches/${matchId.value}/rsvp`, { method: 'POST', body: { status } })
+    await $fetch(`/api/matches/${matchId.value}/rsvp`, { method: 'POST', body: { status, spectatorPays } })
     await refresh()
   }
   catch (e: any) {
@@ -164,6 +165,21 @@ async function togglePaid(player: any) {
       method: 'PATCH',
       body: { paid: !player.paid },
     })
+    await refresh()
+  }
+  catch (e: any) {
+    toast.error(apiError(e))
+  }
+  finally {
+    busy.value = ''
+  }
+}
+
+// El organizador pasa a alguien a espectador, lo devuelve a jugar o cambia si paga cancha.
+async function setAttendance(player: SheetPlayer, patch: { status?: 'voy' | 'espectador', spectatorPays?: boolean }) {
+  busy.value = player.id
+  try {
+    await $fetch(`/api/matches/${matchId.value}/players/${player.id}`, { method: 'PATCH', body: patch })
     await refresh()
   }
   catch (e: any) {
@@ -318,6 +334,7 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
       class="pl-rise"
       style="--i: 1"
       :status="me?.status"
+      :spectator-pays="me?.spectatorPays"
       :busy="busy"
       @answer="setStatus"
       @guest="addGuest"
@@ -368,6 +385,8 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
         class="pl-rise"
         style="--i: 3"
         :going="going"
+        :spectators="spectators"
+        :can-manage="!!data?.canManage"
         :out="out.map(displayName)"
         :capacity="capacity"
         :show-pay="!!match.totalCost"
@@ -380,6 +399,7 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
         @toggle="togglePaid"
         @review="openReview"
         @remove="askRemoval('guest', $event)"
+        @attendance="setAttendance"
       />
 
       <details v-if="data?.canManage" class="pl-danger">

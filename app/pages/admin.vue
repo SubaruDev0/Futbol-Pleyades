@@ -383,10 +383,10 @@ async function submitResetPw() {
 }
 
 // --- Anotar a alguien a un partido ------------------------------------------------
-const addPlayer = reactive({ open: false, phone: '', matchRef: '', status: 'voy' as 'voy' | 'no_voy' | 'quizas', busy: false, error: '' })
+const addPlayer = reactive({ open: false, phone: '', matchRef: '', status: 'voy' as 'voy' | 'no_voy' | 'quizas' | 'espectador', spectatorPays: false, busy: false, error: '' })
 
 function openAddPlayer() {
-  Object.assign(addPlayer, { open: true, phone: '', matchRef: '', status: 'voy', busy: false, error: '' })
+  Object.assign(addPlayer, { open: true, phone: '', matchRef: '', status: 'voy', spectatorPays: false, busy: false, error: '' })
 }
 
 async function submitAddPlayer() {
@@ -395,7 +395,7 @@ async function submitAddPlayer() {
   try {
     const { userName, matchSlug } = await $fetch<{ userName: string, matchSlug: string }>('/api/admin/match-players', {
       method: 'POST',
-      body: { phone: addPlayer.phone, matchRef: addPlayer.matchRef, status: addPlayer.status },
+      body: { phone: addPlayer.phone, matchRef: addPlayer.matchRef, status: addPlayer.status, spectatorPays: addPlayer.spectatorPays },
     })
     addPlayer.open = false
     toast.success(`${userName} quedó anotado en «${matchSlug}»`)
@@ -683,8 +683,16 @@ async function submitAddPlayer() {
             :items="[
               { title: 'Voy', value: 'voy' },
               { title: 'Quizás', value: 'quizas' },
+              { title: 'Espectador', value: 'espectador' },
               { title: 'No voy', value: 'no_voy' },
             ]"
+          />
+          <v-checkbox
+            v-if="addPlayer.status === 'espectador'"
+            v-model="addPlayer.spectatorPays"
+            label="Paga su parte de la cancha"
+            density="compact"
+            hide-details
           />
 
           <p v-if="addPlayer.error" class="pl-admin__error" role="alert">{{ addPlayer.error }}</p>

@@ -4,13 +4,14 @@ import { and, eq } from 'drizzle-orm'
 const body = z.object({
   phone: z.string().trim().min(1),
   matchRef: z.string().trim().min(1),
-  status: z.enum(['voy', 'no_voy', 'quizas']).default('voy'),
+  status: z.enum(['voy', 'no_voy', 'quizas', 'espectador']).default('voy'),
+  spectatorPays: z.boolean().default(false),
 })
 
 /** Anota a alguien a un partido sin que ella misma responda: para cuando el dueño lo hace a mano. */
 export default defineEventHandler(async (event) => {
   await requireAdmin(event)
-  const { phone, matchRef, status } = await readValidatedBody(event, body.parse)
+  const { phone, matchRef, status, spectatorPays } = await readValidatedBody(event, body.parse)
   const db = useDb()
   const s = schema
 
@@ -31,11 +32,16 @@ export default defineEventHandler(async (event) => {
 
   if (existing) {
     await db.update(s.matchPlayers)
-      .set({ status, respondedAt: new Date(), ...(status === 'no_voy' ? { kit: null } : {}) })
+      .set({
+        status,
+        respondedAt: new Date(),
+        spectatorPays: status === 'espectador' && spectatorPays,
+        ...(status === 'no_voy' || status === 'espectador' ? { kit: null } : {}),
+      })
       .where(eq(s.matchPlayers.id, existing.id))
   }
   else {
-    await db.insert(s.matchPlayers).values({ matchId, userId: user.id, status })
+    await db.insert(s.matchPlayers).values({ matchId, userId: user.id, status, spectatorPays: status === 'espectador' && spectatorPays })
   }
 
   return { userName: user.name, matchSlug: match.slug }

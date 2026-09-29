@@ -4,6 +4,9 @@ import { and, eq } from 'drizzle-orm'
 const body = z.object({
   paid: z.boolean().optional(),
   kit: z.enum(['oscuro', 'claro']).nullable().optional(),
+  // El organizador pasa a alguien a espectador (o lo devuelve a jugar) y decide si paga cancha.
+  status: z.enum(['voy', 'espectador']).optional(),
+  spectatorPays: z.boolean().optional(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -19,7 +22,7 @@ export default defineEventHandler(async (event) => {
   if (patch.paid !== undefined && !canSettlePayments(match, user.id, canManage)) {
     throw createError({ statusCode: 403, statusMessage: 'Solo quien cobra puede marcar pagos' })
   }
-  if (patch.kit !== undefined && !canManage) {
+  if ((patch.kit !== undefined || patch.status !== undefined || patch.spectatorPays !== undefined) && !canManage) {
     throw createError({ statusCode: 403, statusMessage: 'No puedes modificar a otro jugador' })
   }
 
@@ -39,6 +42,10 @@ export default defineEventHandler(async (event) => {
     .update(schema.matchPlayers)
     .set({
       ...(patch.kit !== undefined ? { kit: patch.kit } : {}),
+      ...(patch.status !== undefined ? { status: patch.status } : {}),
+      ...(patch.spectatorPays !== undefined ? { spectatorPays: patch.spectatorPays } : {}),
+      // Un espectador no juega: pierde la camiseta que tuviera.
+      ...(patch.status === 'espectador' ? { kit: null } : {}),
       ...(patch.paid !== undefined ? { paid: patch.paid, paidAt: patch.paid ? now : null } : {}),
     })
     .where(eq(schema.matchPlayers.id, playerId))

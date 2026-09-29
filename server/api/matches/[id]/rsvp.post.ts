@@ -2,7 +2,9 @@ import { z } from 'zod'
 import { and, eq } from 'drizzle-orm'
 
 const body = z.object({
-  status: z.enum(['voy', 'no_voy', 'quizas']),
+  status: z.enum(['voy', 'no_voy', 'quizas', 'espectador']),
+  // Solo importa si eres espectador: si igual pagas tu parte de la cancha.
+  spectatorPays: z.boolean().default(false),
 })
 
 export default defineEventHandler(async (event) => {
@@ -14,7 +16,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 409, statusMessage: 'Este partido ya está cerrado' })
   }
 
-  const { status } = await readValidatedBody(event, body.parse)
+  const { status, spectatorPays } = await readValidatedBody(event, body.parse)
   const db = useDb()
 
   const [existing] = await db
@@ -29,25 +31,34 @@ export default defineEventHandler(async (event) => {
     // Quien cobra no se paga a sí mismo: su propia fila arranca pagada.
     const [created] = await db
       .insert(schema.matchPlayers)
-      .values({ matchId: id, userId: user.id, status, paid: user.id === match.collectorUserId })
+      .values({
+        matchId: id,
+        userId: user.id,
+        status,
+        spectatorPays: status === 'espectador' && spectatorPays,
+        paid: user.id === match.collectorUserId,
+      })
       .returning()
     return created
   }
 
-  if (existing.paid && status === 'no_voy') {
+  // Quien ya pagó solo puede dejar de repartir la cancha hablando con quien cobra.
+  const stopsPaying = status === 'no_voy' || (status === 'espectador' && !spectatorPays)
+  if (existing.paid && stopsPaying) {
     throw createError({
       statusCode: 409,
       statusMessage: 'Ya pagaste. Avísale al organizador para que te devuelva o te reemplace.',
     })
   }
 
-  // Bajarse libera la asignación de camiseta; el sorteo ya no es válido para esa persona.
   const [updated] = await db
     .update(schema.matchPlayers)
     .set({
       status,
       respondedAt: new Date(),
-      ...(status === 'no_voy' ? { kit: null } : {}),
+      spectatorPays: status === 'espectador' && spectatorPays,
+      // Bajarse o pasar a espectador libera la camiseta.
+      ...(status === 'no_voy' || status === 'espectador' ? { kit: null } : {}),
     })
     .where(eq(schema.matchPlayers.id, existing.id))
     .returning()

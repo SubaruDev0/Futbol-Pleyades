@@ -21,7 +21,7 @@ export const matchStatus = pgEnum('match_status', [
   'cancelado',
   'jugado',
 ])
-export const rsvpStatus = pgEnum('rsvp_status', ['voy', 'no_voy', 'quizas'])
+export const rsvpStatus = pgEnum('rsvp_status', ['voy', 'no_voy', 'quizas', 'espectador'])
 export const kit = pgEnum('kit', ['oscuro', 'claro'])
 export const memberRole = pgEnum('member_role', ['organizador', 'jugador'])
 export const receiptStatus = pgEnum('receipt_status', ['pendiente', 'aceptado', 'rechazado'])
@@ -134,6 +134,8 @@ export const matchPlayers = pgTable(
     status: rsvpStatus('status').notNull(),
     kit: kit('kit'),
     paid: boolean('paid').notNull().default(false),
+    // Solo aplica a un espectador: si igual reparte la cancha con quienes juegan.
+    spectatorPays: boolean('spectator_pays').notNull().default(false),
     paidAt: timestamp('paid_at', { withTimezone: true }),
     respondedAt: timestamp('responded_at', { withTimezone: true }).notNull().defaultNow(),
   },

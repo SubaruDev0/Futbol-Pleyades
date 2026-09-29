@@ -1,14 +1,16 @@
 <script setup lang="ts">
 /** "¿Vas?": las tres respuestas y el formulario de invitado. Quien lo usa es dueño de cada acción. */
-defineProps<{
+const props = defineProps<{
   /** La respuesta actual de quien mira, si tiene alguna. */
   status?: string | null
+  /** Si quien mira, siendo espectador, reparte la cancha. */
+  spectatorPays?: boolean
   /** Alguna acción en curso: los botones esperan; 'guest' hace girar el botón de invitado. */
   busy?: string
 }>()
 const guestOpen = defineModel<boolean>('guestOpen', { default: false })
 const guestName = defineModel<string>('guestName', { default: '' })
-const emit = defineEmits<{ answer: [status: string], guest: [] }>()
+const emit = defineEmits<{ answer: [status: string, spectatorPays?: boolean], guest: [] }>()
 
 const OPTIONS = [
   { key: 'voy', label: 'Voy' },
@@ -24,6 +26,10 @@ const OPTIONS = [
       <InfoTip title="Anotarse">
         <p><strong>Voy</strong> te suma a la planilla y ocupas un cupo.</p>
         <p><strong>Quizás</strong> avisa que puede ser, pero no ocupa cupo.</p>
+        <p>
+          <strong>Espectador</strong> no juega ni ocupa cupo ni entra al sorteo. Tú decides si
+          igual pagas tu parte de la cancha.
+        </p>
         <p><strong>No voy</strong> deja claro que no cuenten contigo. Puedes cambiarlo cuando quieras.</p>
       </InfoTip>
     </p>
@@ -39,6 +45,27 @@ const OPTIONS = [
       >
         {{ opt.label }}
       </button>
+    </div>
+
+    <div class="pl-answer__spectate">
+      <button
+        type="button"
+        class="pl-link"
+        :class="{ 'pl-link--on': status === 'espectador' }"
+        :disabled="!!busy"
+        @click="emit('answer', 'espectador', props.spectatorPays ?? false)"
+      >
+        {{ status === 'espectador' ? 'Vas de espectador' : 'Voy de espectador' }}
+      </button>
+      <label v-if="status === 'espectador'" class="pl-answer__pays">
+        <input
+          type="checkbox"
+          :checked="spectatorPays"
+          :disabled="!!busy"
+          @change="emit('answer', 'espectador', ($event.target as HTMLInputElement).checked)"
+        >
+        Pago mi parte de la cancha
+      </label>
     </div>
 
     <div class="pl-answer__extra">
@@ -102,6 +129,27 @@ const OPTIONS = [
 .pl-answer__btn--on {
   background: var(--pl-accent);
   color: var(--pl-pitch);
+}
+
+.pl-answer__spectate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.pl-link--on {
+  color: var(--pl-ink);
+}
+
+.pl-answer__pays {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  color: var(--pl-ink-dim);
+  cursor: pointer;
 }
 
 .pl-answer__extra {
