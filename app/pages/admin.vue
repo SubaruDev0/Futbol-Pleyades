@@ -372,7 +372,7 @@ async function submitResetPw() {
       body: { password: resetPw.password },
     })
     resetPw.open = false
-    toast.success(`Contraseña de ${config.name(row)} actualizada`)
+    toast.success(`Contraseña de ${config.value.name(row)} actualizada`)
   }
   catch (e) {
     resetPw.error = apiError(e)
