@@ -134,7 +134,7 @@ export default defineEventHandler(async (event) => {
       if (dryRun) return { dryRun: true, counts }
 
       await atomically(tx => [tx.delete(pr).where(eq(pr.id, id))])
-      await dropReceiptFiles([receipt.fileKey])
+      await dropReceiptFiles(receipt.fileKey ? [receipt.fileKey] : [])
       return { deleted: true, counts }
     }
 

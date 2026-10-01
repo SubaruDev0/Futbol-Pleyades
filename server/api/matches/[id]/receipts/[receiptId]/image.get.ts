@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
   // 404, no 403: no se debe confirmar que existe el comprobante de otra persona.
   if (!allowed) throw notFound()
 
-  const image = await receiptStore.get(row.fileKey)
+  const image = row.fileKey ? await receiptStore.get(row.fileKey) : null
   if (!image) throw notFound()
 
   setResponseHeaders(event, {

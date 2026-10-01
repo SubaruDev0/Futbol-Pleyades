@@ -9,6 +9,8 @@ import { mdiClose } from '@mdi/js'
 defineProps<{
   name: string
   guest: boolean
+  /** El pago se avisó por otro medio: no hay imagen que mirar. */
+  external?: boolean
   createdAt: string | Date
   amount: number | null
   /** URL de la imagen; sin ella, el slot `image` dibuja el comprobante. */
@@ -50,7 +52,12 @@ const reject = () => emit('reject', reason.value.trim())
     </header>
 
     <div class="pl-modal__body">
+      <div v-if="external" class="pl-rrev__external">
+        <p class="pl-rrev__external-title">Dice haberlo enviado por otro medio</p>
+        <p>No hay imagen en la app. Revisa tu banco o tus mensajes antes de aceptar.</p>
+      </div>
       <button
+        v-else
         type="button"
         class="pl-rrev__frame"
         :class="{ 'pl-rrev__frame--zoomed': zoomed }"
@@ -67,7 +74,7 @@ const reject = () => emit('reject', reason.value.trim())
         >
         <span v-else class="pl-rrev__broken">No pudimos cargar la imagen.</span>
       </button>
-      <p class="pl-rrev__hint">{{ zoomed ? 'Toca para ver completo.' : 'Toca la imagen para ampliar.' }}</p>
+      <p v-if="!external" class="pl-rrev__hint">{{ zoomed ? 'Toca para ver completo.' : 'Toca la imagen para ampliar.' }}</p>
 
       <v-text-field
         v-if="rejecting"
@@ -145,6 +152,24 @@ const reject = () => emit('reject', reason.value.trim())
   max-width: none;
   max-height: none;
   width: 200%;
+}
+
+.pl-rrev__external {
+  padding: 1rem;
+  border: 1px dashed var(--pl-line-strong);
+  border-left: 3px solid var(--pl-amber);
+  color: var(--pl-ink-dim);
+  font-size: 0.9rem;
+}
+
+.pl-rrev__external p {
+  margin: 0;
+}
+
+.pl-rrev__external-title {
+  margin-bottom: 0.35rem !important;
+  color: var(--pl-ink);
+  font-weight: 700;
 }
 
 .pl-rrev__broken {

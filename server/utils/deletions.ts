@@ -41,7 +41,7 @@ export async function playerRowsFootprint(where: { matchIds?: string[], playerId
     players: rows?.players ?? 0,
     guests: rows?.guests ?? 0,
     receipts: receipts.length,
-    fileKeys: receipts.map(r => r.fileKey),
+    fileKeys: receipts.flatMap(r => (r.fileKey ? [r.fileKey] : [])),
   }
 }
 

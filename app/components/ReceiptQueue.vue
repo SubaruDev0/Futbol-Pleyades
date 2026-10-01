@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** La lista de comprobantes de quien cobra, esperando revisión. */
 defineProps<{
-  items: { receiptId: string, playerId: string, name: string, guest: boolean, createdAt: string | Date }[]
+  items: { receiptId: string, playerId: string, name: string, guest: boolean, external?: boolean, createdAt: string | Date }[]
   amount: number | null
 }>()
 const emit = defineEmits<{ open: [playerId: string] }>()
@@ -19,7 +19,7 @@ const emit = defineEmits<{ open: [playerId: string] }>()
             {{ r.name }}<span v-if="r.guest" class="pl-invited">invitado</span>
           </span>
           <span v-if="amount" class="pl-review__amount pl-numeric">{{ clp(amount) }}</span>
-          <span class="pl-review__when">{{ ago(r.createdAt) }}</span>
+          <span class="pl-review__when">{{ r.external ? "sin imagen · " : "" }}{{ ago(r.createdAt) }}</span>
         </button>
       </li>
     </ul>

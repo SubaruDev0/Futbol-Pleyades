@@ -6,6 +6,7 @@ export interface ReceiptToReview {
   receiptId: string
   name: string
   guest: boolean
+  external?: boolean
   createdAt: string
 }
 
@@ -70,6 +71,7 @@ async function review(action: 'aceptar' | 'rechazar', reason = '') {
       :key="`${item.receiptId}-${opening}`"
       :name="item.name"
       :guest="item.guest"
+      :external="item.external"
       :created-at="item.createdAt"
       :amount="amount"
       :src="src"

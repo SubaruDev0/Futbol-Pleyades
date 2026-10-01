@@ -159,8 +159,9 @@ export const paymentReceipts = pgTable(
       .notNull()
       .references(() => matchPlayers.id, { onDelete: 'cascade' }),
     uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
-    fileKey: text('file_key').notNull(),
-    contentType: text('content_type').notNull(),
+    // Sin archivo = el pago se avisó por otro medio (no hay imagen que revisar).
+    fileKey: text('file_key'),
+    contentType: text('content_type'),
     status: receiptStatus('status').notNull().default('pendiente'),
     rejectReason: text('reject_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

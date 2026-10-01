@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray } from 'drizzle-orm'
+import { asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 
 export default defineEventHandler(async (event) => {
@@ -14,7 +14,6 @@ export default defineEventHandler(async (event) => {
       match: schema.matches,
       venue: schema.venues,
       collectorName: collector.name,
-      collectorPhone: collector.phone,
       collectorAccount: {
         holderName: schema.paymentAccounts.holderName,
         rut: schema.paymentAccounts.rut,
@@ -63,6 +62,7 @@ export default defineEventHandler(async (event) => {
     ? await db
       .select({
         id: schema.paymentReceipts.id,
+        external: sql<boolean>`${schema.paymentReceipts.fileKey} is null`,
         matchPlayerId: schema.paymentReceipts.matchPlayerId,
         status: schema.paymentReceipts.status,
         rejectReason: schema.paymentReceipts.rejectReason,
@@ -82,7 +82,7 @@ export default defineEventHandler(async (event) => {
     // rechazo quedan solo entre quien paga y quien cobra.
     if (canSettle || paysFor(p, user.id)) return r
     return r.status === 'pendiente'
-      ? { id: null, matchPlayerId: r.matchPlayerId, status: r.status, rejectReason: null, createdAt: r.createdAt }
+      ? { id: null, external: false, matchPlayerId: r.matchPlayerId, status: r.status, rejectReason: null, createdAt: r.createdAt }
       : null
   }
   const withReceipts = players.map(p => ({ ...p, receipt: receiptFor(p) }))
@@ -95,6 +95,7 @@ export default defineEventHandler(async (event) => {
         playerId: p.id,
         name: p.name ?? p.guestName ?? 'Sin nombre',
         guest: !p.userId,
+        external: p.receipt!.external,
         createdAt: p.receipt!.createdAt,
       }))
     : []
@@ -107,7 +108,6 @@ export default defineEventHandler(async (event) => {
   return {
     ...detail,
     collectorAccount: canSeeAccount ? detail?.collectorAccount ?? null : null,
-    collectorPhone: canSeeAccount ? detail?.collectorPhone ?? null : null,
     match,
     canManage,
     canSettle,

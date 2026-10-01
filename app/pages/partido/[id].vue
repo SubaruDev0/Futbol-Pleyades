@@ -135,6 +135,17 @@ function openUpload(id: string) {
   upload.open = true
 }
 
+async function sendExternal(id: string) {
+  try {
+    await $fetch(`/api/matches/${matchId.value}/players/${id}/receipt-external`, { method: 'POST' })
+    toast.success('Avisaste que lo enviaste por otro lugar')
+    await refresh()
+  }
+  catch (e) {
+    toast.error(apiError(e))
+  }
+}
+
 const reviewing = reactive({ open: false, item: null as null | (typeof pendingReceipts.value)[number] })
 function openReview(playerId: string) {
   const item = pendingReceipts.value.find(r => r.playerId === playerId)
@@ -375,7 +386,6 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
       class="pl-rise"
       style="--i: 2"
       :collector-name="data?.collectorName ?? null"
-      :collector-phone="data?.collectorPhone ?? null"
       :per-player="data?.perPlayer ?? null"
       :total-cost="match.totalCost"
       :account="data?.collectorAccount ?? null"
@@ -383,6 +393,7 @@ useHead({ title: () => (match.value ? matchDay(match.value.kickoffAt) : 'Partido
       :payments="moneyPayments"
       :has-collector="hasCollector"
       @upload="openUpload"
+      @external="sendExternal"
     />
 
     <ReceiptQueue

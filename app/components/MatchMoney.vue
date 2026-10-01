@@ -7,13 +7,12 @@ export interface MoneyPayment {
   /** "Tu pago" o "Invitado: …"; se muestra solo cuando hay más de uno. */
   label: string
   paid: boolean
-  receipt: { status: string, rejectReason?: string | null } | null
+  receipt: { status: string, rejectReason?: string | null, external?: boolean } | null
 }
 
 /** Adónde va la plata: la división, la cuenta de quien cobra y los pagos de quien mira. */
 const props = defineProps<{
   collectorName: string | null
-  collectorPhone: string | null
   perPlayer: number | null
   totalCost: number
   account: PaymentAccount | null
@@ -22,12 +21,7 @@ const props = defineProps<{
   payments: MoneyPayment[]
   hasCollector: boolean
 }>()
-const emit = defineEmits<{ upload: [id: string] }>()
-
-// wa.me quiere solo dígitos, sin el "+"; el mensaje es solo para no dejar el chat en blanco.
-const waHref = computed(() => props.collectorPhone
-  ? `https://wa.me/${props.collectorPhone.replace(/\D/g, '')}?text=${encodeURIComponent('Hola! Te mandé el comprobante de la transferencia por acá.')}`
-  : null)
+const emit = defineEmits<{ upload: [id: string], external: [id: string] }>()
 </script>
 
 <template>
@@ -68,7 +62,7 @@ const waHref = computed(() => props.collectorPhone
       <p v-if="payments.length > 1" class="pl-eyebrow pl-mypay__who">{{ p.label }}</p>
       <p v-if="p.paid" class="pl-mypay__state pl-mypay__state--paid">Pagado</p>
       <p v-else-if="p.receipt?.status === 'pendiente'" class="pl-mypay__state pl-mypay__state--review">
-        En revisión
+        {{ p.receipt.external ? 'Avisado, esperando confirmación' : 'En revisión' }}
       </p>
       <template v-else>
         <p v-if="p.receipt?.status === 'rechazado'" class="pl-mypay__state pl-mypay__state--rejected">
@@ -77,9 +71,9 @@ const waHref = computed(() => props.collectorPhone
         <v-btn color="primary" block class="pl-mypay__send" :disabled="!hasCollector" @click="emit('upload', p.id)">
           {{ p.receipt?.status === 'rechazado' ? 'Subir otro comprobante' : 'Ya transferí' }}
         </v-btn>
-        <a v-if="waHref" :href="waHref" target="_blank" rel="noopener" class="pl-mypay__wa">
-          Envié comprobante por WhatsApp
-        </a>
+        <button type="button" class="pl-mypay__other" :disabled="!hasCollector" @click="emit('external', p.id)">
+          Envié el comprobante por otro lugar
+        </button>
       </template>
     </div>
     <p v-if="payments.length && !hasCollector" class="pl-money__hint">
@@ -185,8 +179,13 @@ const waHref = computed(() => props.collectorPhone
   font-weight: 600;
 }
 
-.pl-mypay__wa {
+.pl-mypay__other {
   display: block;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
   margin-top: 0.5rem;
   color: var(--pl-ink-dim);
   font-size: 0.82rem;
@@ -194,7 +193,7 @@ const waHref = computed(() => props.collectorPhone
   text-decoration: none;
 }
 
-.pl-mypay__wa:hover {
+.pl-mypay__other:hover:not(:disabled) {
   color: var(--pl-accent);
   text-decoration: underline;
   text-underline-offset: 3px;
